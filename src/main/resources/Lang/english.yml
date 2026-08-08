@@ -1,0 +1,79 @@
+#english.yml
+
+# InfoHandler
+join_leave_info:
+  title: "&dJoin/Leave Message Info for %player%"
+  join_message: "&5Join Message: &r%joinMessage%"
+  leave_message: "&5Leave Message: &r%leaveMessage%"
+  last_join_change: "&5Last Join Message Change: &e%lastJoinChange%"
+  last_leave_change: "&5Last Leave Message Change: &e%lastLeaveChange%"
+
+# SetHandler messages
+no_permission: "&cYou don't have permission to set %type% messages."
+set_success: "&aSuccessfully set your %type% message."
+invalid_type: "&cInvalid message type. Use 'join' or 'leave'."
+console_error: "&cThis command can only be executed by a player."
+
+
+# ClearHandler messages
+clear_no_permission: "&cYou don't have permission to clear %type% messages for other players."
+clear_player_not_found: "&cPlayer not found."
+clear_success: "&aSuccessfully cleared the %type% message for player %player%."
+clear_reset_success: "&aPlayer %player% has been reset to default messages."
+clear_invalid_type: "&cInvalid message type. Use 'all', 'join', or 'leave'."
+clear_console_error: "&cThis command can only be executed by a player."
+
+
+
+
+setplayer_no_permission: "&cYou don't have permission to set join/leave messages for other players."
+setplayer_player_not_found: "&cPlayer not found."
+setplayer_success: "&aSuccessfully set the %type% message for player %player%."
+setplayer_invalid_type: "&cInvalid message type. Use 'join' or 'leave'."
+
+
+menu_no_permission: "&cSorry, you don't have permission to use this command."
+menu_set_join_permission: "&a/njm set join <message> - Set your join message"
+menu_set_leave_permission: "&a/njm set leave <message> - Set your leave message"
+menu_setplayer_permission: "&a/njm setplayer <player> join/leave <message> - Set another player's join/leave message"
+menu_clearplayer_permission: "&a/njm clear all/join/leave [player] - To clear the join/leave message for players"
+menu_gui_permission: "&a/njm gui - To open the GUI"
+menu_info_permission: "&a/njm info [player] - To See Another player's Info"
+current_join_message: "Your current Join Message"
+current_leave_message: "Your current Leave Message"
+using_default_message: "Using the default message"
+
+
+
+# english.yml
+
+# General messages
+plugin-reloaded: "&aPlugin reloaded successfully."
+
+# Command usage messages
+command-usage:
+  setplayer: "&6Usage: &e/njm setplayer <player> join/leave <message>"
+  set: "&6Usage: &e/njm set join/leave <message>"
+  clear: "&6Usage: &e/njm clear all/join/leave [player]"
+  info: "&6Usage: &e/njm info [player]"
+  reload: "&6Usage: &e/njm reload"
+  gui: "&6Usage: &e/njm gui"
+  language: "&6Usage: &e/njm language - Set your Language"
+
+# Help menu
+help:
+  title: "&d━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  noPermissions: "&cSorry, it seems that you don't have any permissions. Please contact an administrator or obtain a rank to get permissions."
+  languageCommand: "&d  /njm language&5 - Set your Language"
+  setJoinMessage: "&d  /njm set join <message>&5 - Set your join message"
+  setLeaveMessage: "&d  /njm set leave <message>&5 - Set your leave message"
+  setPlayerMessage: "&d  /njm setplayer <player> join/leave <message>&5 - Set another player's join message"
+  clearMessages: "&d  /njm clear all/join/leave [player]&5 - To clear the join/leave message for players"
+  openGui: "&d  /njm gui&5 - To open the GUI"
+  viewInfo: "&d  /njm info [player]&5 - To See Another player's Info"
+  reloadPlugin: "&d  /njm reload&5 - Reload the plugin"
+  setLanguage: "Use /njm language to set your language"
+  currentJoinMessage: "&aYour current Join Message: "
+  currentLeaveMessage: "&aYour current Leave Message: "
+  usingDefaultMessage: "&7Using the default message"
+  footer: "&d━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

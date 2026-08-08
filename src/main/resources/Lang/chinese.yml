@@ -1,0 +1,71 @@
+join_leave_info:
+  title: "&d玩家 %player% 进出信息"
+  join_message: "&5进入消息：&r%joinMessage%"
+  leave_message: "&5离开消息：&r%leaveMessage%"
+  last_join_change: "&5上次进入消息更改：&e%lastJoinChange%"
+  last_leave_change: "&5上次离开消息更改：&e%lastLeaveChange%"
+
+
+
+no_permission: "&c你没有权限设置 %type% 消息。"
+set_success: "&a成功设置你的 %type% 消息。"
+invalid_type: "&c无效的消息类型。使用 'join' 或 'leave'。"
+console_error: "&c此命令只能由玩家执行。"
+
+
+
+
+
+
+
+clear_no_permission: "&c您没有权限清除其他玩家的 %type% 消息。"
+clear_player_not_found: "&c未找到玩家。"
+clear_success: "&a成功清除了玩家 %player% 的 %type% 消息。"
+clear_reset_success: "&a玩家 %player% 已恢复到默认消息。"
+clear_invalid_type: "&c无效的消息类型。请使用 'all'、'join' 或 'leave'。"
+clear_console_error: "&c此命令只能由玩家执行。"
+
+
+
+
+
+
+setplayer_no_permission: "&c您没有权限为其他玩家设置加入/离开消息。"
+setplayer_player_not_found: "&c未找到玩家。"
+setplayer_success: "&a成功为玩家 %player% 设置 %type% 消息。"
+setplayer_invalid_type: "&c无效的消息类型。使用 'join' 或 'leave'。"
+
+
+
+
+
+# General messages
+plugin-reloaded: "&a插件重新加载成功。"
+
+# Command usage messages
+command-usage:
+  setplayer: "&6使用方法: &e/njm setplayer <玩家> join/leave <消息>"
+  set: "&6使用方法: &e/njm set join/leave <消息>"
+  clear: "&6使用方法: &e/njm clear all/join/leave [玩家]"
+  info: "&6使用方法: &e/njm info [玩家]"
+  reload: "&6使用方法: &e/njm reload"
+  gui: "&6使用方法: &e/njm gui"
+  language: "&6使用方法: &e/njm language - 设置您的语言"
+
+# Help menu
+help:
+  title: "&d━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  noPermissions: "&c抱歉，您似乎没有权限。请联系管理员或获取权限等级以获取权限。"
+  languageCommand: "&d  /njm language&5 - 设置您的语言"
+  setJoinMessage: "&d  /njm set join <消息>&5 - 设置您的加入消息"
+  setLeaveMessage: "&d  /njm set leave <消息>&5 - 设置您的离开消息"
+  setPlayerMessage: "&d  /njm setplayer <玩家> join/leave <消息>&5 - 设置其他玩家的加入/离开消息"
+  clearMessages: "&d  /njm clear all/join/leave [玩家]&5 - 清除玩家的加入/离开消息"
+  openGui: "&d  /njm gui&5 - 打开GUI界面"
+  viewInfo: "&d  /njm info [玩家]&5 - 查看其他玩家的信息"
+  reloadPlugin: "&d  /njm reload&5 - 重新加载插件"
+  setLanguage: "使用 /njm language 来设置你的语言"
+  currentJoinMessage: "&a您当前的加入消息: "
+  currentLeaveMessage: "&a您当前的离开消息: "
+  usingDefaultMessage: "&7使用默认消息"
+  footer: "&d━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

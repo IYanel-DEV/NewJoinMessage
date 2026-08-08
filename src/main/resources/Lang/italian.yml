@@ -1,0 +1,68 @@
+join_leave_info:
+  title: "&dInformazioni messaggi di entrata/uscita per %player%"
+  join_message: "&5Messaggio di entrata: &r%joinMessage%"
+  leave_message: "&5Messaggio di uscita: &r%leaveMessage%"
+  last_join_change: "&5Ultima modifica del messaggio di entrata: &e%lastJoinChange%"
+  last_leave_change: "&5Ultima modifica del messaggio di uscita: &e%lastLeaveChange%"
+
+no_permission: "&cNon hai il permesso di impostare messaggi %type%."
+set_success: "&aIl tuo messaggio %type% è stato impostato con successo."
+invalid_type: "&cTipo di messaggio non valido. Usa 'join' o 'leave'."
+console_error: "&cQuesto comando può essere eseguito solo da un giocatore."
+
+
+
+
+
+
+clear_no_permission: "&cNon hai il permesso di cancellare i messaggi %type% per altri giocatori."
+clear_player_not_found: "&cGiocatore non trovato."
+clear_success: "&aMessaggio %type% cancellato con successo per il giocatore %player%."
+clear_reset_success: "&aIl giocatore %player% è stato ripristinato ai messaggi predefiniti."
+clear_invalid_type: "&cTipo di messaggio non valido. Usa 'all', 'join' o 'leave'."
+clear_console_error: "&cQuesto comando può essere eseguito solo da un giocatore."
+
+
+
+
+
+
+setplayer_no_permission: "&cNon hai il permesso di impostare i messaggi di accesso/uscita per altri giocatori."
+setplayer_player_not_found: "&cGiocatore non trovato."
+setplayer_success: "&aMessaggio di %type% per il giocatore %player% impostato con successo."
+setplayer_invalid_type: "&cTipo di messaggio non valido. Usa 'join' o 'leave'."
+
+
+
+
+
+# General messages
+plugin-reloaded: "&aPlugin ricaricato con successo."
+
+# Command usage messages
+command-usage:
+  setplayer: "&6Uso: &e/njm setplayer <giocatore> join/leave <messaggio>"
+  set: "&6Uso: &e/njm set join/leave <messaggio>"
+  clear: "&6Uso: &e/njm clear all/join/leave [giocatore]"
+  info: "&6Uso: &e/njm info [giocatore]"
+  reload: "&6Uso: &e/njm reload"
+  gui: "&6Uso: &e/njm gui"
+  language: "&6Uso: &e/njm language - Imposta la tua lingua"
+
+# Help menu
+help:
+  title: "&d━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  noPermissions: "&cSpiacente, sembra che tu non abbia permessi. Contatta un amministratore o ottieni un grado per ottenere permessi."
+  languageCommand: "&d  /njm language&5 - Imposta la tua lingua"
+  setJoinMessage: "&d  /njm set join <messaggio>&5 - Imposta il tuo messaggio di benvenuto"
+  setLeaveMessage: "&d  /njm set leave <messaggio>&5 - Imposta il tuo messaggio di addio"
+  setPlayerMessage: "&d  /njm setplayer <giocatore> join/leave <messaggio>&5 - Imposta il messaggio di benvenuto di un altro giocatore"
+  clearMessages: "&d  /njm clear all/join/leave [giocatore]&5 - Per cancellare i messaggi di benvenuto/addio dei giocatori"
+  openGui: "&d  /njm gui&5 - Per aprire l'interfaccia grafica"
+  viewInfo: "&d  /njm info [giocatore]&5 - Per vedere le informazioni di un altro giocatore"
+  reloadPlugin: "&d  /njm reload&5 - Ricaricare il plugin"
+  setLanguage: "Usa /njm language per impostare la tua lingua"
+  currentJoinMessage: "&aIl tuo messaggio di benvenuto attuale: "
+  currentLeaveMessage: "&aIl tuo messaggio di addio attuale: "
+  usingDefaultMessage: "&7Usa il messaggio predefinito"
+  footer: "&d━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

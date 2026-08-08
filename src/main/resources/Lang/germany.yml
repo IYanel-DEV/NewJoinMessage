@@ -1,0 +1,70 @@
+join_leave_info:
+  title: "&dBeitritts-/Austrittsnachrichten für %player%"
+  join_message: "&5Beitrittsnachricht: &r%joinMessage%"
+  leave_message: "&5Austrittsnachricht: &r%leaveMessage%"
+  last_join_change: "&5Letzte Änderung der Beitrittsnachricht: &r%lastJoinChange%"
+  last_leave_change: "&5Letzte Änderung der Austrittsnachricht: &r%lastLeaveChange%"
+
+
+# germany.yml
+no_permission: "&cDu hast keine Berechtigung, die %type%-Nachrichten festzulegen."
+set_success: "&aDeine %type%-Nachricht wurde erfolgreich festgelegt."
+invalid_type: "&cUngültiger Nachrichtentyp. Verwende 'join' oder 'leave'."
+console_error: "&cDieser Befehl kann nur von einem Spieler ausgeführt werden."
+
+
+
+
+
+
+# ClearHandler messages
+clear_no_permission: "&cDu hast keine Berechtigung, %type%-Nachrichten für andere Spieler zu löschen."
+clear_player_not_found: "&cSpieler nicht gefunden."
+clear_success: "&aDie %type%-Nachricht für Spieler %player% wurde erfolgreich gelöscht."
+clear_reset_success: "&aSpieler %player% wurde auf Standardnachrichten zurückgesetzt."
+clear_invalid_type: "&cUngültiger Nachrichtentyp. Verwende 'all', 'join' oder 'leave'."
+clear_console_error: "&cDieser Befehl kann nur von einem Spieler ausgeführt werden."
+
+
+
+
+
+setplayer_no_permission: "&cDu hast keine Berechtigung, die Join/Leave-Nachrichten für andere Spieler festzulegen."
+setplayer_player_not_found: "&cSpieler nicht gefunden."
+setplayer_success: "&aErfolgreich die %type%-Nachricht für Spieler %player% festgelegt."
+setplayer_invalid_type: "&cUngültiger Nachrichtentyp. Verwende 'join' oder 'leave'."
+
+
+
+
+
+# General messages
+plugin-reloaded: "&aPlugin erfolgreich neu geladen."
+
+# Command usage messages
+command-usage:
+  setplayer: "&6Verwendung: &e/njm setplayer <spieler> join/leave <nachricht>"
+  set: "&6Verwendung: &e/njm set join/leave <nachricht>"
+  clear: "&6Verwendung: &e/njm clear all/join/leave [spieler]"
+  info: "&6Verwendung: &e/njm info [spieler]"
+  reload: "&6Verwendung: &e/njm reload"
+  gui: "&6Verwendung: &e/njm gui"
+  language: "&6Verwendung: &e/njm language - Setze deine Sprache"
+
+# Help menu
+help:
+  title: "&d━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  noPermissions: "&cEntschuldigung, es scheint, dass du keine Berechtigungen hast. Bitte kontaktiere einen Administrator oder erhalte einen Rang, um Berechtigungen zu bekommen."
+  languageCommand: "&d  /njm language&5 - Setze deine Sprache"
+  setJoinMessage: "&d  /njm set join <nachricht>&5 - Setze deine Beitrittsnachricht"
+  setLeaveMessage: "&d  /njm set leave <nachricht>&5 - Setze deine Verlassen-Nachricht"
+  setPlayerMessage: "&d  /njm setplayer <spieler> join/leave <nachricht>&5 - Setze die Beitrittsnachricht eines anderen Spielers"
+  clearMessages: "&d  /njm clear all/join/leave [spieler]&5 - Um die Beitritts-/Verlassen-Nachrichten der Spieler zu löschen"
+  openGui: "&d  /njm gui&5 - Um das GUI zu öffnen"
+  viewInfo: "&d  /njm info [spieler]&5 - Um die Informationen eines anderen Spielers zu sehen"
+  reloadPlugin: "&d  /njm reload&5 - Lade das Plugin neu"
+  setLanguage: "Verwende /njm language, um deine Sprache einzustellen"
+  currentJoinMessage: "&aDeine aktuelle Beitrittsnachricht: "
+  currentLeaveMessage: "&aDeine aktuelle Verlassen-Nachricht: "
+  usingDefaultMessage: "&7Verwendet die Standardnachricht"
+  footer: "&d━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
