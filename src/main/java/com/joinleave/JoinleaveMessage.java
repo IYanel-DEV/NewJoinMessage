@@ -90,6 +90,11 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
 
             try {
                 UpdateChecker.init(this, 110979).requestUpdateCheck().whenComplete((result, e) -> {
+                    if (e != null || result == null) {
+                        getLogger().warning("UpdateChecker failed: " + (e != null ? e.getMessage() : "null result"));
+                        console.sendMessage(messageBuilder.toString());
+                        return;
+                    }
                     if (result.requiresUpdate()) {
                         String pluginName = "                       [" + getDescription().getName() + "]";
                         String updateMessage = pluginName + " " + ChatColor.RED + "An update is available! New version: " + result.getNewestVersion();
@@ -204,6 +209,7 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
             connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false", username, password);
             return true;
         } catch (SQLException e) {
+            connection = null;
             getLogger().severe("Failed to connect to MySQL: " + e.getMessage());
             return false;
         }
@@ -216,6 +222,7 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
             } catch (SQLException e) {
                 getLogger().severe("Failed to close MySQL connection: " + e.getMessage());
             }
+            connection = null;
         }
     }
 
@@ -305,6 +312,7 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
                 closeMySQLConnection();
                 if (setupMySQL()) {
                     createTableIfNotExists();
+                    mysqlEnabled = true;
                     getLogger().info("MySQL has been enabled and connected successfully.");
                 } else {
                     mysqlEnabled = false;
@@ -313,9 +321,9 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
                 }
             } else {
                 closeMySQLConnection();
+                mysqlEnabled = false;
                 getLogger().info("MySQL has been disabled.");
             }
-            mysqlEnabled = newMySQLStatus;
         }
 
         if (mysqlEnabled && connection == null) {
