@@ -381,12 +381,19 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         try {
             Player player = event.getPlayer();
             String playerName = player.getName();
-            String joinPrefix = ColorUtils.colorize(cfg("join-prefix", "&d[&a+&d]"));
-            String defaultJoinPrefix = ColorUtils.colorize(
-                    cfg("default-join-prefix", "&7PLAYERNAME &5has joined").replace("PLAYERNAME", playerName));
             String joinEditable = getMessage(player, "join", "default-join-message");
-            String joinMessage = joinPrefix + " " + defaultJoinPrefix + ChatColor.GRAY + " - "
-                    + ColorUtils.colorize(parsePlaceholders(joinEditable, player));
+            String joinMessage;
+            if (getConfig().getBoolean("use-modern-format", false)) {
+                joinMessage = ColorUtils.colorize(cfg("player-name-color", "&a")) + playerName
+                        + " " + ColorUtils.colorize(cfg("join-text-color", "&f")) + cfg("join-text", "joined the server")
+                        + " - " + ColorUtils.colorize(parsePlaceholders(joinEditable, player));
+            } else {
+                String joinPrefix = ColorUtils.colorize(cfg("join-prefix", "&d[&a+&d]"));
+                String defaultJoinPrefix = ColorUtils.colorize(
+                        cfg("default-join-prefix", "&7PLAYERNAME &5has joined").replace("PLAYERNAME", playerName));
+                joinMessage = joinPrefix + " " + defaultJoinPrefix + ChatColor.GRAY + " - "
+                        + ColorUtils.colorize(parsePlaceholders(joinEditable, player));
+            }
             event.setJoinMessage(joinMessage);
         } catch (Throwable t) {
             getLogger().warning("handleJoin failed for " + event.getPlayer().getName() + ": " + t.getMessage());
@@ -399,12 +406,19 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         try {
             Player player = event.getPlayer();
             String playerName = player.getName();
-            String leavePrefix = ColorUtils.colorize(cfg("leave-prefix", "&d[&c-&d]"));
-            String defaultLeavePrefix = ColorUtils.colorize(
-                    cfg("default-leave-prefix", "&7PLAYERNAME &5has left").replace("PLAYERNAME", playerName));
             String leaveEditable = getMessage(player, "leave", "default-leave-message");
-            String leaveMessage = leavePrefix + " " + defaultLeavePrefix + ChatColor.GRAY + " - "
-                    + ColorUtils.colorize(parsePlaceholders(leaveEditable, player));
+            String leaveMessage;
+            if (getConfig().getBoolean("use-modern-format", false)) {
+                leaveMessage = ColorUtils.colorize(cfg("player-name-color", "&a")) + playerName
+                        + " " + ColorUtils.colorize(cfg("leave-text-color", "&f")) + cfg("leave-text", "left the server")
+                        + " - " + ColorUtils.colorize(parsePlaceholders(leaveEditable, player));
+            } else {
+                String leavePrefix = ColorUtils.colorize(cfg("leave-prefix", "&d[&c-&d]"));
+                String defaultLeavePrefix = ColorUtils.colorize(
+                        cfg("default-leave-prefix", "&7PLAYERNAME &5has left").replace("PLAYERNAME", playerName));
+                leaveMessage = leavePrefix + " " + defaultLeavePrefix + ChatColor.GRAY + " - "
+                        + ColorUtils.colorize(parsePlaceholders(leaveEditable, player));
+            }
             event.setQuitMessage(leaveMessage);
         } catch (Throwable t) {
             getLogger().warning("handleLeave failed for " + event.getPlayer().getName() + ": " + t.getMessage());

@@ -49,5 +49,11 @@ welcome-message-enabled: false
 # Customize the welcome message
 welcome-message: "&e&l[!] &7Welcome %player% to the server! You are the %count% player!"
 
-
+# Modern-style appearance (used when present; & codes or #RRGGBB)
+join-text: "joined the server"
+leave-text: "left the server"
+player-name-color: "&a"
+join-text-color: "&f"
+leave-text-color: "&f"
+use-modern-format: false
 
