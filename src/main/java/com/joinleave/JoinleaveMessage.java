@@ -455,27 +455,22 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
     private void updateLastChange(Player player, String messageType) {
         FileConfiguration playersConfig = getPlayersConfig();
         playersConfig.set("players." + player.getUniqueId() + ".last_change." + messageType, System.currentTimeMillis());
-        savePlayersConfig();
     }
 
     public String getMessage(Player player, String messageType, String defaultMessageType) {
         boolean useMysql = mysqlEnabled && connection != null;
         if (useMysql) {
-            try {
-                PreparedStatement statement = connection.prepareStatement(
-                        "SELECT " + messageType + "_message FROM player_messages WHERE uuid = ?");
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "SELECT " + messageType + "_message FROM player_messages WHERE uuid = ?")) {
                 statement.setString(1, player.getUniqueId().toString());
-                ResultSet resultSet = statement.executeQuery();
-
-                if (resultSet.next()) {
-                    String message = resultSet.getString(messageType + "_message");
-                    if (message != null && !message.isEmpty()) {
-                        return message;
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        String message = resultSet.getString(messageType + "_message");
+                        if (message != null && !message.isEmpty()) {
+                            return message;
+                        }
                     }
                 }
-
-                resultSet.close();
-                statement.close();
             } catch (SQLException e) {
                 getLogger().severe("Failed to retrieve " + messageType + " message for player: " + e.getMessage());
             }

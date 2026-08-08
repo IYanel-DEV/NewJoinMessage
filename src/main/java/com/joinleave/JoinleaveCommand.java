@@ -135,7 +135,7 @@ public class JoinleaveCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("");
         sender.sendMessage(ChatColor.DARK_PURPLE + "                NewJoinMessage Help");
         sender.sendMessage("");
-        sender.sendMessage(ChatColor.GRAY + "      NJM version: " + ChatColor.GREEN + "4.0" + ChatColor.GREEN + " ✔");
+        sender.sendMessage(ChatColor.GRAY + "      NJM version: " + ChatColor.GREEN + plugin.getDescription().getVersion() + ChatColor.GREEN + " ✔");
         sender.sendMessage("");
         sender.sendMessage(ChatColor.GRAY + "      Made With " + ChatColor.RED + "❤" + ChatColor.GRAY + " by Yanel");
 

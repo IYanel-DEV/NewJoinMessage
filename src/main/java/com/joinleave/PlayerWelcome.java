@@ -150,8 +150,8 @@ public class PlayerWelcome implements Listener {
                     launchFirework(location, fireworkType, fireworkPower);
                 }
             }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Welcome/firework handling failed for join: " + e.getMessage());
+        } catch (Throwable t) {
+            plugin.getLogger().warning("Welcome/firework handling failed for join: " + t.getMessage());
         }
     }
 
