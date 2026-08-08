@@ -1,6 +1,7 @@
 package com.joinleave;
 
 import com.joinleave.util.ColorUtils;
+import com.joinleave.util.ModernDataImporter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -138,6 +139,7 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
             saveResource("data.yml", false);
         }
         playersConfig = YamlConfiguration.loadConfiguration(playersFile);
+        ModernDataImporter.importIfNeeded(this, playersConfig, playersFile);
 
         mysqlEnabled = getConfig().getBoolean("mysql.enabled");
         if (mysqlEnabled) {
