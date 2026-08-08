@@ -112,40 +112,46 @@ public class PlayerWelcome implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        UUID playerId = player.getUniqueId();
+        try {
+            Player player = event.getPlayer();
+            UUID playerId = player.getUniqueId();
 
-        // Always perform these actions regardless of whether player has joined before
-        boolean welcomeMessageEnabled = plugin.getConfig().getBoolean("welcome-message-enabled", true); // Check if welcome message is enabled
+            // Always perform these actions regardless of whether player has joined before
+            boolean welcomeMessageEnabled = plugin.getConfig().getBoolean("welcome-message-enabled", true); // Check if welcome message is enabled
 
-        if (welcomeMessageEnabled) {
-            int playerCount = playersConfig.getConfigurationSection("players").getKeys(false).size();
-            String welcomeMessage = ChatColor.translateAlternateColorCodes('&',
-                    "&e&l[!] &7Welcome " + ChatColor.YELLOW + player.getName() + ChatColor.GRAY +
-                            " to the server! You are the " + ChatColor.LIGHT_PURPLE + "#" + playerCount + ChatColor.GRAY + " player!");
+            if (welcomeMessageEnabled) {
+                int playerCount = playersConfig.getConfigurationSection("players").getKeys(false).size();
+                String welcomeMessage = ChatColor.translateAlternateColorCodes('&',
+                        "&e&l[!] &7Welcome " + ChatColor.YELLOW + player.getName() + ChatColor.GRAY +
+                                " to the server! You are the " + ChatColor.LIGHT_PURPLE + "#" + playerCount + ChatColor.GRAY + " player!");
 
-            Bukkit.broadcastMessage(welcomeMessage);
-        }
-
-        playersConfig.set("players." + playerId + ".name", player.getName());
-        savePlayersConfig();
-
-        // Firework display
-        boolean fireworkEnabled = fireworksConfig.getBoolean("fireworks.enabled", true); // Corrected accessing boolean value
-
-        if (fireworkEnabled) {
-            String fireworkTypeString = fireworksConfig.getString("fireworks.type", "BALL");
-            FireworkEffect.Type fireworkType;
-            try {
-                fireworkType = FireworkEffect.Type.valueOf(fireworkTypeString);
-            } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Invalid firework type specified in the configuration. Defaulting to BALL.");
-                fireworkType = FireworkEffect.Type.BALL;
+                Bukkit.broadcastMessage(welcomeMessage);
             }
-            int fireworkPower = fireworksConfig.getInt("fireworks.power", 1);
 
-            Location location = player.getLocation();
-            launchFirework(location, fireworkType, fireworkPower);
+            playersConfig.set("players." + playerId + ".name", player.getName());
+            savePlayersConfig();
+
+            // Firework display
+            boolean fireworkEnabled = fireworksConfig.getBoolean("fireworks.enabled", true); // Corrected accessing boolean value
+
+            if (fireworkEnabled) {
+                String fireworkTypeString = fireworksConfig.getString("fireworks.type", "BALL");
+                FireworkEffect.Type fireworkType;
+                try {
+                    fireworkType = FireworkEffect.Type.valueOf(fireworkTypeString);
+                } catch (IllegalArgumentException e) {
+                    plugin.getLogger().warning("Invalid firework type specified in the configuration. Defaulting to BALL.");
+                    fireworkType = FireworkEffect.Type.BALL;
+                }
+                int fireworkPower = fireworksConfig.getInt("fireworks.power", 1);
+
+                Location location = player.getLocation();
+                if (location != null && location.getWorld() != null) {
+                    launchFirework(location, fireworkType, fireworkPower);
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Welcome/firework handling failed for join: " + e.getMessage());
         }
     }
 
