@@ -9,6 +9,7 @@ join_leave_info:
 
 no_permission: "&c%type% メッセージを設定する権限がありません。"
 set_success: "&a%type% メッセージを正常に設定しました。"
+message_too_long: "&cメッセージが長すぎます。最大は %max% 文字です。"
 invalid_type: "&c無効なメッセージタイプです。「join」または「leave」を使用してください。"
 console_error: "&cこのコマンドはプレイヤーのみ実行できます。"
 

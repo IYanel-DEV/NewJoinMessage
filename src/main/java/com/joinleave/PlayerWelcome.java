@@ -135,8 +135,13 @@ public class PlayerWelcome implements Listener {
                 Bukkit.broadcastMessage(welcomeMessage);
             }
 
-            playersConfig.set("players." + playerId + ".name", player.getName());
-            savePlayersConfig();
+            String namePath = "players." + playerId + ".name";
+            // Only touch the disk when the stored name actually changed. Saving on every
+            // join meant a synchronous file write per player, per connection.
+            if (!player.getName().equals(playersConfig.getString(namePath))) {
+                playersConfig.set(namePath, player.getName());
+                savePlayersConfig();
+            }
 
             // Firework display
             boolean fireworkEnabled = fireworksConfig.getBoolean("fireworks.enabled", true); // Corrected accessing boolean value

@@ -9,6 +9,7 @@ join_leave_info:
 # germany.yml
 no_permission: "&cDu hast keine Berechtigung, die %type%-Nachrichten festzulegen."
 set_success: "&aDeine %type%-Nachricht wurde erfolgreich festgelegt."
+message_too_long: "&cDeine Nachricht ist zu lang. Maximal sind %max% Zeichen."
 invalid_type: "&cUngültiger Nachrichtentyp. Verwende 'join' oder 'leave'."
 console_error: "&cDieser Befehl kann nur von einem Spieler ausgeführt werden."
 

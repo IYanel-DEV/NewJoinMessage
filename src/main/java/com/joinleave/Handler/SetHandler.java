@@ -13,7 +13,7 @@ public class SetHandler {
     // Constructor
     public SetHandler(JoinleaveMessage plugin) {
         this.plugin = plugin;
-        this.languageHandler = new LanguageHandler(plugin);
+        this.languageHandler = plugin.getLanguageHandler();
     }
 
     public boolean handleSetCommand(CommandSender sender, String[] args) {
@@ -28,8 +28,17 @@ public class SetHandler {
                         sender.sendMessage(languageHandler.getMessage(player, "no_permission").replace("%type%", messageType));
                         return true;
                     }
+                    if (plugin.isTooLong(message)) {
+                        sender.sendMessage(languageHandler.getMessage(player, "message_too_long")
+                                .replace("%max%", String.valueOf(plugin.maxMessageLength())));
+                        return true;
+                    }
+                    if (!plugin.enforceCooldown(sender)) {
+                        return true;
+                    }
 
                     plugin.setMessage(player, messageType, message);
+                    plugin.noteChange(sender);
                     sender.sendMessage(languageHandler.getMessage(player, "set_success").replace("%type%", messageType));
                 } else {
                     sender.sendMessage(languageHandler.getMessage(player, "invalid_type"));

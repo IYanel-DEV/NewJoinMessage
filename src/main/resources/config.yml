@@ -5,8 +5,13 @@
 
 about:
   - "NewJoinMessage Plugin"
-  - "Version: 5.1.1"
+  - "Version: 5.2.0"
   - "Author: [Yanel, oled]"
+
+# Check Spigot for a newer version on startup. Online admins holding
+# joinleave.update are told when one is available. Set to false to disable
+# the check and the notifications entirely.
+update-check: true
 
 
 #Permissions: joinleave.reload; or reload command , joinleave.set.join; for set join command message , joinleave.set.leave; for set leave message
@@ -21,6 +26,9 @@ mysql:
   database: your_database
   username: your_username
   password: your_password
+  # Table holding every per-player setting. Created and migrated automatically,
+  # so an older 5.1.1 install gains the new columns on first start.
+  table: player_messages
 
 
 # Join and leave messages
@@ -81,4 +89,19 @@ default-leave-messages: []
 disabled-worlds: []
 
 # Available in messages: %player%, %displayname%, %world%, %online%,
-# %max_players%, plus the legacy PLAYERNAME token.
+# %max_players%, %player_count%, %server_name%, %motd%, %server_version%,
+# %time%, %prefix%, %vault_prefix%, plus the legacy PLAYERNAME token.
+
+# Longest custom message a player may set, in characters. Stops oversized chat
+# spam. Set to 0 for no limit.
+max-message-length: 100
+
+# Seconds a player must wait between message changes. Set to 0 to disable.
+# Players holding joinleave.cooldown.bypass never wait.
+change-cooldown-seconds: 3
+
+# Value used for %server_name%. Leave empty to fall back to the server's own name.
+server-name: ""
+
+# Players listed per /njm list page.
+list-page-size: 8

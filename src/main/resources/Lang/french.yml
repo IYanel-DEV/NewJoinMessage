@@ -10,6 +10,7 @@ join_leave_info:
 
 no_permission: "&cVous n'avez pas la permission de définir les messages %type%."
 set_success: "&aVotre message %type% a été défini avec succès."
+message_too_long: "&cVotre message est trop long. Le maximum est de %max% caractères."
 invalid_type: "&cType de message invalide. Utilisez 'join' ou 'leave'."
 console_error: "&cCette commande ne peut être exécutée que par un joueur."
 

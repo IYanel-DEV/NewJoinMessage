@@ -11,6 +11,7 @@ join_leave_info:
 # SetHandler messages
 no_permission: "&cYou don't have permission to set %type% messages."
 set_success: "&aSuccessfully set your %type% message."
+message_too_long: "&cYour message is too long. The maximum is %max% characters."
 invalid_type: "&cInvalid message type. Use 'join' or 'leave'."
 console_error: "&cThis command can only be executed by a player."
 
@@ -32,16 +33,6 @@ setplayer_success: "&aSuccessfully set the %type% message for player %player%."
 setplayer_invalid_type: "&cInvalid message type. Use 'join' or 'leave'."
 
 
-menu_no_permission: "&cSorry, you don't have permission to use this command."
-menu_set_join_permission: "&a/njm set join <message> - Set your join message"
-menu_set_leave_permission: "&a/njm set leave <message> - Set your leave message"
-menu_setplayer_permission: "&a/njm setplayer <player> join/leave <message> - Set another player's join/leave message"
-menu_clearplayer_permission: "&a/njm clear all/join/leave [player] - To clear the join/leave message for players"
-menu_gui_permission: "&a/njm gui - To open the GUI"
-menu_info_permission: "&a/njm info [player] - To See Another player's Info"
-current_join_message: "Your current Join Message"
-current_leave_message: "Your current Leave Message"
-using_default_message: "Using the default message"
 
 
 

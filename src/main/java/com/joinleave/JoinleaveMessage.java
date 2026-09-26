@@ -1,53 +1,46 @@
 package com.joinleave;
 
+import com.joinleave.storage.PlayerStore;
+import com.joinleave.storage.StorageFactory;
+import com.joinleave.storage.YamlBackend;
 import com.joinleave.util.ColorUtils;
 import com.joinleave.util.ModernDataImporter;
 import com.joinleave.util.Perms;
+import com.joinleave.util.VaultHook;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
-import org.bukkit.command.Command;
-import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.*;
-
-import org.bukkit.util.StringUtil;
-
-import java.io.File;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
-
-
 public class JoinleaveMessage extends JavaPlugin implements Listener {
 
-    private FileConfiguration playersConfig;
-    private File playersFile;
-
-    private Connection connection;
-    private boolean mysqlEnabled;
+    private static final long FLUSH_INTERVAL_TICKS = 100L;
+    private static final SimpleDateFormat CHANGE_TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     private static JoinleaveMessage instance;
+
+    // Written by the main thread (reload) and read by the async flush task.
+    private volatile PlayerStore store;
+    private final Map<UUID, Long> lastChangeAt = new ConcurrentHashMap<UUID, Long>();
+    private volatile VaultHook vaultHook;
 
     private LanguageConfigs languageConfigs;
     private LanguageManager languageManager;
@@ -76,56 +69,17 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         languageConfigs = new LanguageConfigs(this);
         languageConfigs.loadConfigs();
 
-        languageHandler = new LanguageHandler(this);
-
-        File dataLangFile = new File(getDataFolder(), "Lang/DataLang.yml");
-        languageManager = new LanguageManager(dataLangFile);
+        // One shared manager: every reader and writer goes through this instance so the
+        // cached DataLang view can never drift from what is on disk.
+        languageManager = new LanguageManager(this);
+        languageHandler = new LanguageHandler(this, languageManager);
 
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(languageManager), this);
 
-        Bukkit.getScheduler().runTask(this, () -> {
-            ConsoleCommandSender console = Bukkit.getConsoleSender();
-
-            StringBuilder messageBuilder = new StringBuilder();
-            messageBuilder.append(ChatColor.LIGHT_PURPLE + "                           \n");
-            messageBuilder.append(ChatColor.LIGHT_PURPLE + "  _   _                   _       _       __  __                                      \n");
-            messageBuilder.append(ChatColor.LIGHT_PURPLE + " | \\ | |                 | |     (_)     |  \\/  |                                     \n");
-            messageBuilder.append(ChatColor.LIGHT_PURPLE + " |  \\| | _____      __   | | ___  _ _ __ | \\  / | ___  ___ ___  __ _  __ _  ___  ___ \n");
-            messageBuilder.append(ChatColor.LIGHT_PURPLE + " | . ` |/ _ \\ \\ /\\ / /   | |/ _ \\| | '_ \\| |\\/| |/ _ \\/ __/ __|/ _` |/ _` |/ _ \\/ __|\n");
-            messageBuilder.append(ChatColor.LIGHT_PURPLE + " | |\\  |  __/\\ V  V / |__| | (_) | | | | | |  | |  __/\\__ \\__ \\ (_| | (_| |  __/\\__ \\\n");
-            messageBuilder.append(ChatColor.LIGHT_PURPLE + " |_| \\_|\\___| \\_/\\_/ \\____/ \\___/|_|_| |_|_|  |_|\\___||___/___/\\__,_|\\__, |\\___||___/\n");
-            messageBuilder.append(ChatColor.LIGHT_PURPLE + "                                                                      __/ |          \n");
-            messageBuilder.append(ChatColor.LIGHT_PURPLE + "                                                                     |___/           \n");
-            messageBuilder.append("\n");
-
-            try {
-                UpdateChecker.init(this, 110979).requestUpdateCheck().whenComplete((result, e) -> {
-                    if (e != null || result == null) {
-                        getLogger().warning("UpdateChecker failed: " + (e != null ? e.getMessage() : "null result"));
-                        console.sendMessage(messageBuilder.toString());
-                        return;
-                    }
-                    if (result.requiresUpdate()) {
-                        String pluginName = "                       [" + getDescription().getName() + "]";
-                        String updateMessage = pluginName + " " + ChatColor.RED + "An update is available! New version: " + result.getNewestVersion();
-                        messageBuilder.append(updateMessage);
-                        console.sendMessage(messageBuilder.toString());
-                    } else {
-                        String pluginName = "                        " + getDescription().getName() + " ";
-                        String upToDateMessage = pluginName + " " + ChatColor.GREEN + "Plugin is up to date!";
-                        messageBuilder.append(upToDateMessage);
-                        console.sendMessage(messageBuilder.toString());
-                    }
-                });
-            } catch (Throwable t) {
-                getLogger().warning("UpdateChecker failed: " + t.getMessage());
-                console.sendMessage(messageBuilder.toString());
-            }
-        });
+        Bukkit.getScheduler().runTask(this, () -> announceUpdateStatus());
 
         try {
-            int pluginId = 33311;
-            Metrics metrics = new Metrics(this, pluginId);
+            new Metrics(this, 33311);
         } catch (Throwable t) {
             getLogger().warning("Metrics (bStats) failed to initialize: " + t.getMessage());
         }
@@ -133,8 +87,10 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         PlayerWelcome playerWelcome = new PlayerWelcome(this);
         Bukkit.getPluginManager().registerEvents(playerWelcome, this);
 
-        String defaultEncoding = System.getProperty("file.encoding");
-        getLogger().info("Default system encoding: " + defaultEncoding);
+        VanishAPI.register(this);
+
+        vaultHook = new VaultHook(getLogger());
+        vaultHook.setup();
 
         this.gui = new JoinLeaveGUI(this);
         getServer().getPluginManager().registerEvents(this.gui, this);
@@ -143,32 +99,89 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         getCommand("njm").setExecutor(joinLeaveCommand);
         getCommand("njm").setTabCompleter(joinLeaveCommand);
 
-        playersFile = new File(getDataFolder(), "data.yml");
-        if (!playersFile.exists()) {
-            saveResource("data.yml", false);
-        }
-        playersConfig = YamlConfiguration.loadConfiguration(playersFile);
-        ModernDataImporter.importIfNeeded(this, playersConfig, playersFile);
+        buildPlayerStore();
+        startFlushTask();
+    }
 
-        mysqlEnabled = getConfig().getBoolean("mysql.enabled");
-        if (mysqlEnabled && (!setupMySQL() || !createTableIfNotExists())) {
-            mysqlEnabled = false;
-            closeMySQLConnection();
-            getLogger().severe("MySQL failed — falling back to data.yml for this session.");
+    private void announceUpdateStatus() {
+        org.bukkit.command.ConsoleCommandSender console = Bukkit.getConsoleSender();
+        StringBuilder banner = new StringBuilder();
+        banner.append(ChatColor.LIGHT_PURPLE + "                           \n");
+        banner.append(ChatColor.LIGHT_PURPLE + "  _   _                   _       _       __  __                                      \n");
+        banner.append(ChatColor.LIGHT_PURPLE + " | \\ | |                 | |     (_)     |  \\/  |                                     \n");
+        banner.append(ChatColor.LIGHT_PURPLE + " |  \\| | _____      __   | | ___  _ _ __ | \\  / | ___  ___ ___  __ _  __ _  ___  ___ \n");
+        banner.append(ChatColor.LIGHT_PURPLE + " | . ` |/ _ \\ \\ /\\ / /   | |/ _ \\| | '_ \\| |\\/| |/ _ \\/ __/ __|/ _` |/ _` |/ _ \\/ __|\n");
+        banner.append(ChatColor.LIGHT_PURPLE + " | |\\  |  __/\\ V  V / |__| | (_) | | | | | |  | |  __/\\__ \\__ \\ (_| | (_| |  __/\\__ \\\n");
+        banner.append(ChatColor.LIGHT_PURPLE + " |_| \\_|\\___| \\_/\\_/ \\____/ \\___/|_|_| |_|_|  |_|\\___||___/___/\\__,_|\\__, |\\___||___/\n");
+        banner.append(ChatColor.LIGHT_PURPLE + "                                                                      __/ |          \n");
+        banner.append(ChatColor.LIGHT_PURPLE + "                                                                     |___/           \n");
+        banner.append("\n");
+
+        // Gated by config, not by a permission: this runs once at startup and prints to
+        // the console, and the console always holds every permission, so a permission
+        // check here could never deny anything.
+        if (!getConfig().getBoolean("update-check", true)) {
+            console.sendMessage(banner.toString());
+            return;
         }
+
+        try {
+            UpdateChecker.init(this, 110979).requestUpdateCheck().whenComplete((result, e) -> {
+                if (e != null || result == null) {
+                    getLogger().warning("UpdateChecker failed: " + (e != null ? e.getMessage() : "null result"));
+                    console.sendMessage(banner.toString());
+                    return;
+                }
+                if (result.requiresUpdate()) {
+                    String newest = result.getNewestVersion();
+                    banner.append("                       [" + getDescription().getName() + "] " + ChatColor.RED
+                            + "An update is available! New version: " + newest);
+                    notifyAdmins(ChatColor.RED + "An update is available for " + getDescription().getName()
+                            + "! New version: " + newest);
+                } else {
+                    banner.append("                        " + getDescription().getName() + " " + ChatColor.GREEN
+                            + "Plugin is up to date!");
+                }
+                console.sendMessage(banner.toString());
+            });
+        } catch (Throwable t) {
+            getLogger().warning("UpdateChecker failed: " + t.getMessage());
+            console.sendMessage(banner.toString());
+        }
+    }
+
+    /** Tells online admins who hold joinleave.update about an available update. */
+    private void notifyAdmins(String message) {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (Perms.has(player, "joinleave.update")) {
+                player.sendMessage(message);
+            }
+        }
+    }
+
+    private void buildPlayerStore() {
+        ModernDataImporter.importIfNeeded(this, StorageFactory.dataFile(this));
+        store = StorageFactory.create(this);
+    }
+
+    private void startFlushTask() {
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this,
+                () -> {
+                    try {
+                        store.flush();
+                    } catch (Throwable t) {
+                        getLogger().log(Level.WARNING, "Background data flush failed.", t);
+                    }
+                },
+                FLUSH_INTERVAL_TICKS, FLUSH_INTERVAL_TICKS);
     }
 
     @Override
     public void onDisable() {
-        if (playersConfig != null) {
-            savePlayersConfig();
+        Bukkit.getScheduler().cancelTasks(this);
+        if (store != null) {
+            store.close();
         }
-        closeMySQLConnection();
-    }
-
-    public void onPlayerJoin(Player player) {
-        String defaultLanguage = "English";
-        languageManager.setPlayerLanguage(player, defaultLanguage);
     }
 
     public static JoinleaveMessage getInstance() {
@@ -179,199 +192,98 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         return gui;
     }
 
-    private FileConfiguration getPlayersConfig() {
-        return playersConfig;
+    public PlayerStore getStore() {
+        return store;
     }
 
-    private void savePlayersConfig() {
-        try {
-            playersConfig.save(playersFile);
-        } catch (IOException e) {
-            getLogger().severe("Failed to save data.yml: " + e.getMessage());
-        }
+    public LanguageManager getLanguageManager() {
+        return languageManager;
     }
 
-    public boolean hasCustomMessage(Player player) {
-        return getCustomMessage(player, "join") != null || getCustomMessage(player, "leave") != null;
+    public LanguageHandler getLanguageHandler() {
+        return languageHandler;
     }
 
     public String getLastChange(Player player, String messageType) {
-        FileConfiguration playersConfig = getPlayersConfig();
-
-        String lastChangePath = "players." + player.getUniqueId() + ".last_change." + messageType;
-        if (playersConfig.contains(lastChangePath)) {
-            long lastChangeTimestamp = playersConfig.getLong(lastChangePath);
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            return dateFormat.format(new Date(lastChangeTimestamp));
-        }
-
-        return "N/A";
+        return getLastChange(player.getUniqueId(), messageType);
     }
 
-    private boolean setupMySQL() {
-        String host = getConfig().getString("mysql.host");
-        int port = getConfig().getInt("mysql.port");
-        String database = getConfig().getString("mysql.database");
-        String username = getConfig().getString("mysql.username");
-        String password = getConfig().getString("mysql.password");
-
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + database
-                    + "?useSSL=false&connectTimeout=5000&socketTimeout=5000", username, password);
-            return true;
-        } catch (ClassNotFoundException | SQLException e) {
-            connection = null;
-            getLogger().severe("Failed to connect to MySQL: " + e.getMessage());
-            return false;
+    public String getLastChange(UUID uuid, String messageType) {
+        String key = "join".equals(messageType) ? PlayerStore.KEY_LAST_CHANGE_JOIN : PlayerStore.KEY_LAST_CHANGE_LEAVE;
+        long timestamp = store.getLong(uuid, key, -1L);
+        if (timestamp < 0L) {
+            return "N/A";
         }
-    }
-
-    private void closeMySQLConnection() {
-        if (connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                getLogger().severe("Failed to close MySQL connection: " + e.getMessage());
-            }
-            connection = null;
-        }
-    }
-
-    private boolean createTableIfNotExists() {
-        try (PreparedStatement statement = connection.prepareStatement(
-                "CREATE TABLE IF NOT EXISTS player_messages (uuid VARCHAR(36) PRIMARY KEY, join_message TEXT, leave_message TEXT)")) {
-            statement.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            getLogger().severe("Failed to create player_messages table: " + e.getMessage());
-            return false;
-        }
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> completions = new ArrayList<>();
-
-        if (args.length == 1) {
-            List<String> subCommands = new ArrayList<>();
-            subCommands.add("setplayer");
-            subCommands.add("set");
-            subCommands.add("gui");
-            subCommands.add("clear");
-            subCommands.add("reload");
-            StringUtil.copyPartialMatches(args[0], subCommands, completions);
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) {
-            List<String> playerNames = new ArrayList<>();
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                playerNames.add(player.getName());
-            }
-            StringUtil.copyPartialMatches(args[1], playerNames, completions);
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) {
-            List<String> messageTypes = new ArrayList<>();
-            messageTypes.add("join");
-            messageTypes.add("leave");
-            StringUtil.copyPartialMatches(args[2], messageTypes, completions);
-        } else if (args.length == 2 && (args[0].equalsIgnoreCase("set") || args[0].equalsIgnoreCase("clear"))) {
-            List<String> messageTypes = new ArrayList<>();
-            messageTypes.add("join");
-            messageTypes.add("leave");
-            StringUtil.copyPartialMatches(args[1], messageTypes, completions);
-        }
-
-        Collections.sort(completions);
-        return completions;
+        return CHANGE_TIME_FORMAT.format(new Date(timestamp));
     }
 
     public void reloadPlugin(CommandSender sender) {
         List<String> configFiles = Arrays.asList("config.yml", "firework.yml", "players.yml", "data.yml");
 
         for (String configFile : configFiles) {
-            File file = new File(getDataFolder(), configFile);
-
+            java.io.File file = new java.io.File(getDataFolder(), configFile);
             if (!file.exists()) {
                 saveResource(configFile, false);
-
+                String message = configFile + " not found, created default configuration.";
                 if (sender instanceof Player) {
-                    Player player = (Player) sender;
-                    player.sendMessage(ChatColor.LIGHT_PURPLE + "Checking " + configFile + "...");
-                    player.sendMessage(ChatColor.DARK_PURPLE + configFile + " not found, created default configuration." + ChatColor.GREEN + " ✔");
+                    ((Player) sender).sendMessage(ChatColor.LIGHT_PURPLE + "Checking " + configFile + "...");
+                    ((Player) sender).sendMessage(ChatColor.DARK_PURPLE + message + ChatColor.GREEN + " ✔");
                 } else {
                     getLogger().info("Checking " + configFile + "...");
-                    getLogger().info(configFile + " not found, created default configuration.");
+                    getLogger().info(message);
                 }
             }
         }
 
         reloadConfig();
+        languageHandler.reloadLanguages();
+        languageManager.reload();
 
-        File fireworkFile = new File(getDataFolder(), "firework.yml");
-        if (fireworkFile.exists()) {
-            YamlConfiguration fireworkConfig = new YamlConfiguration();
-            try {
-                fireworkConfig.load(fireworkFile);
-            } catch (IOException | InvalidConfigurationException e) {
-                getLogger().severe("Failed to reload firework.yml: " + e.getMessage());
-            }
-        } else {
-            getLogger().warning("firework.yml not found to reload.");
+        // Rebuild the store so a backend change in config actually takes effect.
+        // The old store is flushed and closed *before* the new one is built, otherwise
+        // the rebuild would read the backend before those pending writes landed and
+        // in-memory state would silently disagree with what is on disk.
+        PlayerStore previous = store;
+        if (previous != null) {
+            previous.close();
         }
-
-        boolean newMySQLStatus = getConfig().getBoolean("mysql.enabled");
-
-        if (newMySQLStatus != mysqlEnabled) {
-            if (newMySQLStatus) {
-                closeMySQLConnection();
-                if (setupMySQL() && createTableIfNotExists()) {
-                    mysqlEnabled = true;
-                    getLogger().info("MySQL has been enabled and connected successfully.");
-                } else {
-                    mysqlEnabled = false;
-                    closeMySQLConnection();
-                    getLogger().severe("MySQL failed — falling back to data.yml for this session.");
-                }
-            } else {
-                closeMySQLConnection();
-                mysqlEnabled = false;
-                getLogger().info("MySQL has been disabled.");
-            }
+        PlayerStore rebuilt = null;
+        try {
+            rebuilt = StorageFactory.create(this);
+        } catch (Throwable t) {
+            getLogger().log(Level.SEVERE, "Failed to rebuild the player data backend; "
+                    + "falling back to data.yml.", t);
         }
-
-        if (mysqlEnabled && connection == null) {
-            if (setupMySQL() && createTableIfNotExists()) {
-                getLogger().info("MySQL has been enabled and connected successfully.");
-            } else {
-                mysqlEnabled = false;
-                closeMySQLConnection();
-                getLogger().severe("MySQL failed — falling back to data.yml for this session.");
-            }
+        if (rebuilt == null) {
+            rebuilt = new PlayerStore(new YamlBackend(StorageFactory.dataFile(this), getLogger()), getLogger());
+            rebuilt.load();
         }
-
-        if (!mysqlEnabled && connection != null) {
-            closeMySQLConnection();
-            getLogger().info("System is now on local files");
-        }
+        store = rebuilt;
+        getLogger().info("Reloaded player data backend: " + store.backendName());
 
         if (sender instanceof Player) {
-            Player player = (Player) sender;
-            player.sendMessage(ChatColor.LIGHT_PURPLE + "Plugin reloaded" + ChatColor.GREEN + " ✔");
+            ((Player) sender).sendMessage(ChatColor.LIGHT_PURPLE + "Plugin reloaded" + ChatColor.GREEN + " ✔");
         } else {
             getLogger().info("Plugin reloaded successfully.");
         }
     }
 
     public void clearMessage(Player player, String messageType) {
-        if (messageType.equals("all")) {
-            setMessage(player, "join", "");
-            setMessage(player, "leave", "");
+        clearMessage(player.getUniqueId(), messageType);
+    }
+
+    public void clearMessage(UUID uuid, String messageType) {
+        if ("all".equalsIgnoreCase(messageType)) {
+            setMessage(uuid, "join", "");
+            setMessage(uuid, "leave", "");
         } else {
-            setMessage(player, messageType, "");
+            setMessage(uuid, messageType, "");
         }
     }
 
     public void resetPlayerMessages(Player player) {
-        setMessage(player, "join", getConfig().getString("default-join-message"));
-        setMessage(player, "leave", getConfig().getString("default-leave-message"));
+        setMessage(player.getUniqueId(), "join", cfg("default-join-message", ""));
+        setMessage(player.getUniqueId(), "leave", cfg("default-leave-message", ""));
     }
 
     private String cfg(String path, String def) {
@@ -380,20 +292,143 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
     }
 
     public boolean canCustomize(Player player, String type) {
-        return getConfig().getBoolean("allow-all-players", true)
-                || Perms.has(player, "joinleave.set." + type);
+        return canCustomize(player.getUniqueId(), player, type);
+    }
+
+    public boolean canCustomize(UUID uuid, Player online, String type) {
+        if (getConfig().getBoolean("allow-all-players", true)) {
+            return true;
+        }
+        return online != null && Perms.has(online, "joinleave.set." + type);
+    }
+
+    /**
+     * Resolves a name to a UUID, covering players who are currently offline.
+     * Online players always win; otherwise the stored name index is consulted.
+     */
+    public UUID resolvePlayerUuid(String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        Player online = Bukkit.getPlayerExact(name);
+        if (online != null) {
+            return online.getUniqueId();
+        }
+        return store.resolveUuid(name);
+    }
+
+    public String displayNameFor(UUID uuid, String fallback) {
+        String stored = store.resolveName(uuid);
+        if (stored != null) {
+            return stored;
+        }
+        Player online = uuid == null ? null : Bukkit.getPlayer(uuid);
+        if (online != null) {
+            return online.getName();
+        }
+        return fallback;
     }
 
     public String parsePlaceholders(String message, Player player) {
         if (message == null) {
             return "";
         }
+        // Order matters: %prefix% can itself contain a % character, so it is resolved
+        // last to avoid a stored prefix re-triggering substitution.
+        int online = Bukkit.getOnlinePlayers().size();
+        String serverName = cfg("server-name", "");
+        if (serverName.isEmpty()) {
+            serverName = Bukkit.getServer().getName();
+        }
+        String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
+
         return message.replace("PLAYERNAME", player.getName())
                 .replace("%player%", player.getName())
                 .replace("%displayname%", player.getDisplayName())
                 .replace("%world%", player.getWorld().getName())
-                .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
-                .replace("%max_players%", String.valueOf(Bukkit.getMaxPlayers()));
+                .replace("%online%", String.valueOf(online))
+                .replace("%player_count%", String.valueOf(online))
+                .replace("%max_players%", String.valueOf(Bukkit.getMaxPlayers()))
+                .replace("%server_name%", serverName)
+                .replace("%motd%", Bukkit.getServer().getMotd())
+                .replace("%server_version%", Bukkit.getServer().getBukkitVersion())
+                .replace("%time%", time)
+                .replace("%vault_prefix%", vaultPrefix(player))
+                .replace("%prefix%", vaultPrefix(player));
+    }
+
+    private String vaultPrefix(Player player) {
+        if (vaultHook == null) {
+            return "";
+        }
+        vaultHook.setup();
+        return vaultHook.prefix(player);
+    }
+
+    /** Longest custom message a player may set; 0 means unlimited. */
+    public int maxMessageLength() {
+        int configured = getConfig().getInt("max-message-length", 100);
+        return configured < 0 ? 0 : configured;
+    }
+
+    public boolean isTooLong(String message) {
+        int max = maxMessageLength();
+        return max > 0 && message != null && message.length() > max;
+    }
+
+    public int cooldownSeconds() {
+        int configured = getConfig().getInt("change-cooldown-seconds", 3);
+        return configured < 0 ? 0 : configured;
+    }
+
+    /**
+     * Blocks a rapid second change. The console is never limited and
+     * joinleave.cooldown.bypass skips the wait.
+     *
+     * @return seconds the sender still has to wait, 0 when they may continue.
+     */
+    public int cooldownRemaining(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            return 0;
+        }
+        Player player = (Player) sender;
+        if (Perms.has(player, "joinleave.cooldown.bypass")) {
+            return 0;
+        }
+        int seconds = cooldownSeconds();
+        if (seconds <= 0) {
+            return 0;
+        }
+        Long last = lastChangeAt.get(player.getUniqueId());
+        if (last == null) {
+            return 0;
+        }
+        long elapsed = (System.currentTimeMillis() - last) / 1000L;
+        int remaining = seconds - (int) elapsed;
+        return remaining > 0 ? remaining : 0;
+    }
+
+    /** Sends the wait notice when a cooldown is active. */
+    public boolean enforceCooldown(CommandSender sender) {
+        int remaining = cooldownRemaining(sender);
+        if (remaining <= 0) {
+            return true;
+        }
+        sender.sendMessage(ChatColor.RED + "Please wait " + remaining + " more second"
+                + (remaining == 1 ? "" : "s") + " before changing your message again.");
+        return false;
+    }
+
+    /** Called after a change is accepted so the cooldown starts. */
+    public void noteChange(CommandSender sender) {
+        if (sender instanceof Player) {
+            lastChangeAt.put(((Player) sender).getUniqueId(), System.currentTimeMillis());
+        }
+    }
+
+    /** Every player who has stored custom data, for /njm list. */
+    public List<UUID> playersWithMessages() {
+        return store.playersWithCustomData();
     }
 
     public String renderMessage(Player player, String type) {
@@ -428,8 +463,10 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void handleJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        // Remember the name so admins can still find this player while they are offline.
+        store.setName(player.getUniqueId(), player.getName());
         try {
-            Player player = event.getPlayer();
             if (broadcastsDisabled(player)) {
                 event.setJoinMessage(null);
                 return;
@@ -437,15 +474,16 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
             event.setJoinMessage(renderMessage(player, "join"));
             playConfiguredSound(player, "join");
         } catch (Throwable t) {
-            getLogger().warning("handleJoin failed for " + event.getPlayer().getName() + ": " + t.getMessage());
-            event.setJoinMessage(event.getPlayer().getName() + " joined");
+            getLogger().warning("handleJoin failed for " + player.getName() + ": " + t.getMessage());
+            event.setJoinMessage(player.getName() + " joined");
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void handleLeave(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        store.setName(player.getUniqueId(), player.getName());
         try {
-            Player player = event.getPlayer();
             if (broadcastsDisabled(player)) {
                 event.setQuitMessage(null);
                 return;
@@ -453,36 +491,35 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
             event.setQuitMessage(renderMessage(player, "leave"));
             playConfiguredSound(player, "leave");
         } catch (Throwable t) {
-            getLogger().warning("handleLeave failed for " + event.getPlayer().getName() + ": " + t.getMessage());
-            event.setQuitMessage(event.getPlayer().getName() + " left");
+            getLogger().warning("handleLeave failed for " + player.getName() + ": " + t.getMessage());
+            event.setQuitMessage(player.getName() + " left");
         }
     }
 
-    private String playerPath(Player player, String key) {
-        return "players." + player.getUniqueId() + "." + key;
-    }
-
-    private String getPlayerSetting(Player player, String key) {
-        return playersConfig.getString(playerPath(player, key));
-    }
-
-    private void setPlayerSetting(Player player, String key, Object value) {
-        playersConfig.set(playerPath(player, key), value);
-        savePlayersConfig();
-    }
-
     public boolean isBroadcastEnabled(Player player) {
-        return playersConfig.getBoolean(playerPath(player, "broadcast_enabled"), true);
+        return isBroadcastEnabled(player.getUniqueId());
+    }
+
+    public boolean isBroadcastEnabled(UUID uuid) {
+        return store.getBoolean(uuid, PlayerStore.KEY_BROADCAST, true);
     }
 
     public boolean toggleBroadcast(Player player) {
-        boolean enabled = !isBroadcastEnabled(player);
-        setPlayerSetting(player, "broadcast_enabled", enabled);
+        return toggleBroadcast(player.getUniqueId());
+    }
+
+    public boolean toggleBroadcast(UUID uuid) {
+        boolean enabled = !isBroadcastEnabled(uuid);
+        store.setBoolean(uuid, PlayerStore.KEY_BROADCAST, enabled);
         return enabled;
     }
 
     public String getIcon(Player player) {
-        String icon = getPlayerSetting(player, "icon");
+        return getIcon(player.getUniqueId());
+    }
+
+    public String getIcon(UUID uuid) {
+        String icon = store.getString(uuid, PlayerStore.KEY_ICON);
         if ("off".equalsIgnoreCase(icon)) {
             return "";
         }
@@ -490,24 +527,39 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
     }
 
     public void setIcon(Player player, String icon) {
-        setPlayerSetting(player, "icon", icon == null || icon.isEmpty() || "off".equalsIgnoreCase(icon) ? "off" : icon);
+        setIcon(player.getUniqueId(), icon);
+    }
+
+    public void setIcon(UUID uuid, String icon) {
+        store.setString(uuid, PlayerStore.KEY_ICON,
+                icon == null || icon.isEmpty() || "off".equalsIgnoreCase(icon) ? "off" : icon);
     }
 
     public String getSound(Player player, String type) {
-        String sound = getPlayerSetting(player, type + "_sound");
+        return getSound(player.getUniqueId(), type);
+    }
+
+    public String getSound(UUID uuid, String type) {
+        String key = "join".equals(type) ? PlayerStore.KEY_JOIN_SOUND : PlayerStore.KEY_LEAVE_SOUND;
+        String sound = store.getString(uuid, key);
         return sound == null ? cfg("sounds." + type, "") : sound;
     }
 
     public boolean setSound(Player player, String type, String soundName) {
+        return setSound(player.getUniqueId(), type, soundName);
+    }
+
+    public boolean setSound(UUID uuid, String type, String soundName) {
+        String key = "join".equals(type) ? PlayerStore.KEY_JOIN_SOUND : PlayerStore.KEY_LEAVE_SOUND;
         if ("off".equalsIgnoreCase(soundName)) {
-            setPlayerSetting(player, type + "_sound", "off");
+            store.setString(uuid, key, "off");
             return true;
         }
         Sound sound = resolveSound(soundName);
         if (sound == null) {
             return false;
         }
-        setPlayerSetting(player, type + "_sound", sound.name());
+        store.setString(uuid, key, sound.name());
         return true;
     }
 
@@ -529,7 +581,7 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         if (!getConfig().getBoolean("sounds.enabled", false)) {
             return;
         }
-        Sound sound = resolveSound(getSound(source, type));
+        Sound sound = resolveSound(getSound(source.getUniqueId(), type));
         if (sound == null) {
             return;
         }
@@ -540,68 +592,46 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         }
     }
 
-    private void reloadPlayersConfig() {
-        playersFile = new File(getDataFolder(), "data.yml");
-        playersConfig = YamlConfiguration.loadConfiguration(playersFile);
+    public void setMessage(Player player, String column, String message) {
+        setMessage(player.getUniqueId(), column, message);
     }
 
-    public void setMessage(Player player, String column, String message) {
+    public void setMessage(UUID uuid, String column, String message) {
         if (!("join".equals(column) || "leave".equals(column))) {
             getLogger().warning("Ignored invalid message type: " + column);
             return;
         }
-        boolean useMysql = mysqlEnabled && connection != null;
-        if (useMysql) {
-            try (PreparedStatement statement = connection.prepareStatement(
-                    "INSERT INTO player_messages (uuid, " + column + "_message) VALUES (?, ?) ON DUPLICATE KEY UPDATE " + column + "_message = ?")) {
-                statement.setString(1, player.getUniqueId().toString());
-                statement.setString(2, message);
-                statement.setString(3, message);
-                statement.executeUpdate();
-                return;
-            } catch (SQLException e) {
-                getLogger().severe("MySQL write failed; using data.yml for this session: " + e.getMessage());
-                mysqlEnabled = false;
-                closeMySQLConnection();
-            }
+        String value = message == null ? "" : message;
+        int max = maxMessageLength();
+        if (max > 0 && value.length() > max) {
+            // Entry points validate first and show the player an error; this is the
+            // backstop that guarantees storage never holds an oversized value.
+            getLogger().warning("Truncated an over-long " + column + " message for " + uuid
+                    + " to " + max + " characters.");
+            value = value.substring(0, max);
         }
-        playersConfig.set("players." + player.getUniqueId() + "." + column + "_message", message);
-        updateLastChange(player, column);
-        savePlayersConfig();
-    }
-
-    private void updateLastChange(Player player, String messageType) {
-        FileConfiguration playersConfig = getPlayersConfig();
-        playersConfig.set("players." + player.getUniqueId() + ".last_change." + messageType, System.currentTimeMillis());
+        store.setString(uuid, column + "_message", value);
+        store.setLong(uuid, "join".equals(column)
+                ? PlayerStore.KEY_LAST_CHANGE_JOIN : PlayerStore.KEY_LAST_CHANGE_LEAVE, System.currentTimeMillis());
     }
 
     public String getCustomMessage(Player player, String messageType) {
+        return getCustomMessage(player.getUniqueId(), messageType);
+    }
+
+    public String getCustomMessage(UUID uuid, String messageType) {
         if (!("join".equals(messageType) || "leave".equals(messageType))) {
             return null;
         }
-        boolean useMysql = mysqlEnabled && connection != null;
-        if (useMysql) {
-            try (PreparedStatement statement = connection.prepareStatement(
-                    "SELECT " + messageType + "_message FROM player_messages WHERE uuid = ?")) {
-                statement.setString(1, player.getUniqueId().toString());
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    if (resultSet.next()) {
-                        String message = resultSet.getString(messageType + "_message");
-                        return message == null || message.isEmpty() ? null : message;
-                    }
-                }
-            } catch (SQLException e) {
-                getLogger().severe("MySQL read failed; using data.yml for this session: " + e.getMessage());
-                mysqlEnabled = false;
-                closeMySQLConnection();
-            }
-        }
-        String message = playersConfig.getString(playerPath(player, messageType + "_message"));
-        return message == null || message.isEmpty() ? null : message;
+        return store.getString(uuid, messageType + "_message");
     }
 
     public String getMessage(Player player, String messageType, String defaultMessageType) {
-        String custom = getCustomMessage(player, messageType);
+        return getMessage(player.getUniqueId(), messageType, defaultMessageType);
+    }
+
+    public String getMessage(UUID uuid, String messageType, String defaultMessageType) {
+        String custom = getCustomMessage(uuid, messageType);
         if (custom != null) {
             return custom;
         }

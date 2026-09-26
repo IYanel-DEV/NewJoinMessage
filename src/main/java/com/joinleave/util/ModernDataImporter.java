@@ -8,10 +8,17 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * One-time import of player messages from a sibling ModernJoinMessage plugin.
+ * Only runs when data.yml has no players yet.
+ */
 public final class ModernDataImporter {
-    private ModernDataImporter() {}
 
-    public static int importIfNeeded(JavaPlugin plugin, FileConfiguration playersConfig, File playersFile) {
+    private ModernDataImporter() {
+    }
+
+    public static int importIfNeeded(JavaPlugin plugin, File playersFile) {
+        FileConfiguration playersConfig = YamlConfiguration.loadConfiguration(playersFile);
         ConfigurationSection existing = playersConfig.getConfigurationSection("players");
         if (existing != null && !existing.getKeys(false).isEmpty()) {
             return 0;

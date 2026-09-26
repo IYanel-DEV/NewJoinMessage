@@ -10,8 +10,10 @@ Spigot: https://www.spigotmc.org/resources/110979/
 - One 1.8-safe player/admin GUI, with personal icons and version-aware join/leave sounds
 - YAML storage, optional MySQL fallback, languages, first-join welcome/fireworks, vanish suppression, metrics, and updates
 - Preview and personal broadcast toggle
-- `%player%`, `%displayname%`, `%world%`, `%online%`, `%max_players%`, and `PLAYERNAME` placeholders
+- `%player%`, `%displayname%`, `%world%`, `%online%`, `%player_count%`, `%max_players%`, `%server_name%`, `%motd%`, `%server_version%`, `%time%`, `%prefix%`/`%vault_prefix%`, and `PLAYERNAME` placeholders
 - Random default join/leave pools and per-world broadcast suppression
+- Message length cap and a change cooldown to stop chat spam
+- `/njm list` to page through everyone with a custom message
 
 ## Commands
 
@@ -22,6 +24,7 @@ Spigot: https://www.spigotmc.org/resources/110979/
 - `/njm toggle` → enable or disable your broadcasts
 - `/njm icon <icon|off>` → choose an icon
 - `/njm sound <join|leave> <sound|off>` → choose a sound available on the current server
+- `/njm list [page]` → list players with custom messages
 - `/njm setplayer`, `/njm info`, `/njm reload`, `/njm language` → administration and language tools
 
 ## Build
@@ -32,7 +35,7 @@ Requires JDK 8+ and Maven:
 mvn -q clean package
 ```
 
-Jar: `target/NewJoinMessage-5.1.1.jar`
+Jar: `target/NewJoinMessage-5.2.0.jar`
 
 The jar targets Java 8 bytecode and intentionally omits `api-version`; declaring a modern API version would make 1.8-1.12 reject the same jar. Minecraft 26.2 servers still require the server's supported Java version (Java 25 for Paper 26.2).
 

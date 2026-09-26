@@ -9,6 +9,7 @@ join_leave_info:
 
 no_permission: "&c你没有权限设置 %type% 消息。"
 set_success: "&a成功设置你的 %type% 消息。"
+message_too_long: "&c你的消息太长了。最多 %max% 个字符。"
 invalid_type: "&c无效的消息类型。使用 'join' 或 'leave'。"
 console_error: "&c此命令只能由玩家执行。"
 

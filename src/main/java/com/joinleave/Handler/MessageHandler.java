@@ -4,7 +4,8 @@ import com.joinleave.JoinleaveMessage;
 import com.joinleave.LangMessageChanger;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
+
+import java.util.UUID;
 
 public class MessageHandler {
 
@@ -18,25 +19,24 @@ public class MessageHandler {
     }
 
     public boolean handleInfoCommand(CommandSender sender, String[] args) {
-        if (args.length >= 2 && args[0].equalsIgnoreCase("info")) {
-            String playerName = args[1];
-            Player targetPlayer = plugin.getServer().getPlayerExact(playerName);
-
-            if (targetPlayer == null) {
-                sender.sendMessage(ChatColor.RED + "Player not found.");
-                return true;
-            }
-
-            String joinMessage = plugin.getMessage(targetPlayer, "join", "default-join-message");
-            String leaveMessage = plugin.getMessage(targetPlayer, "leave", "default-leave-message");
-            String lastJoinChange = plugin.getLastChange(targetPlayer, "join");
-            String lastLeaveChange = plugin.getLastChange(targetPlayer, "leave");
-
-            // Send join/leave info using LangMessageChanger
-            langMessageChanger.sendJoinLeaveInfo(sender, targetPlayer.getName(), joinMessage, leaveMessage, lastJoinChange, lastLeaveChange);
-
+        if (args.length < 2 || !args[0].equalsIgnoreCase("info")) {
+            return false;
+        }
+        String playerName = args[1];
+        // Works for offline players too, as long as they have stored data.
+        UUID targetId = plugin.resolvePlayerUuid(playerName);
+        if (targetId == null) {
+            sender.sendMessage(ChatColor.RED + "Player not found.");
             return true;
         }
-        return false;
+
+        String displayName = plugin.displayNameFor(targetId, playerName);
+        String joinMessage = plugin.getMessage(targetId, "join", "default-join-message");
+        String leaveMessage = plugin.getMessage(targetId, "leave", "default-leave-message");
+        String lastJoinChange = plugin.getLastChange(targetId, "join");
+        String lastLeaveChange = plugin.getLastChange(targetId, "leave");
+
+        langMessageChanger.sendJoinLeaveInfo(sender, displayName, joinMessage, leaveMessage, lastJoinChange, lastLeaveChange);
+        return true;
     }
 }

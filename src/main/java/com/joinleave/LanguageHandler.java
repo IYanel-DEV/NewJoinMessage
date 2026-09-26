@@ -3,37 +3,49 @@ package com.joinleave;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 
+/**
+ * Resolves translated UI strings. Player language comes from the shared
+ * {@link LanguageManager}, so a lookup costs a map read rather than a file read.
+ */
 public class LanguageHandler {
 
-    private final JoinleaveMessage plugin;
-    private final Map<String, YamlConfiguration> languageFiles;
+    private final JavaPlugin plugin;
+    private final LanguageManager languageManager;
+    private final Map<String, YamlConfiguration> languageFiles = new HashMap<String, YamlConfiguration>();
 
-    public LanguageHandler(JoinleaveMessage plugin) {
+    private static final String[] LANGUAGES = {
+            "english", "germany", "french", "spanish", "italian",
+            "chinese", "japanese", "korean", "russian"
+    };
+
+    public LanguageHandler(JavaPlugin plugin, LanguageManager languageManager) {
         this.plugin = plugin;
-        this.languageFiles = new HashMap<>();
-        initializeLanguages();
+        this.languageManager = languageManager;
+        reloadLanguages();
     }
 
-    private void initializeLanguages() {
-        String[] languages = {
-                "english", "germany", "french", "spanish", "italian",
-                "chinese", "japanese", "korean", "russian"
-        };
-
-        for (String lang : languages) {
-            loadLanguageFile(lang);
+    /** Reloads every Lang/*.yml file so language edits apply without a restart. */
+    public void reloadLanguages() {
+        languageFiles.clear();
+        for (String language : LANGUAGES) {
+            loadLanguageFile(language);
         }
+        plugin.getLogger().info("Loaded " + languageFiles.size() + " language file(s).");
     }
 
     private void loadLanguageFile(String language) {
         try {
             File langFile = new File(plugin.getDataFolder(), "Lang/" + language + ".yml");
+            if (!langFile.isFile()) {
+                return;
+            }
             languageFiles.put(language, YamlConfiguration.loadConfiguration(langFile));
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Error loading language: " + language, e);
@@ -41,10 +53,10 @@ public class LanguageHandler {
     }
 
     public String getMessage(Player player, String key) {
-        String playerLanguage = getPlayerLanguage(player);
+        String playerLanguage = languageManager.getPlayerLanguage(player);
         YamlConfiguration langConfig = languageFiles.get(playerLanguage);
 
-        // Try player's language first
+        // Try the player's language first.
         if (langConfig != null) {
             String message = langConfig.getString(key);
             if (message != null && !message.isEmpty()) {
@@ -52,7 +64,7 @@ public class LanguageHandler {
             }
         }
 
-        // Fallback 1: Try English
+        // Fallback 1: English.
         if (!"english".equals(playerLanguage)) {
             YamlConfiguration englishConfig = languageFiles.get("english");
             if (englishConfig != null) {
@@ -63,7 +75,7 @@ public class LanguageHandler {
             }
         }
 
-        // Fallback 2: Try any available language
+        // Fallback 2: any language that happens to define the key.
         for (YamlConfiguration config : languageFiles.values()) {
             String message = config.getString(key);
             if (message != null && !message.isEmpty()) {
@@ -71,20 +83,6 @@ public class LanguageHandler {
             }
         }
 
-        // Final fallback
         return ChatColor.RED + "[" + key + "]";
-    }
-
-    private String getPlayerLanguage(Player player) {
-        if (player == null) return "english";
-
-        try {
-            File dataLangFile = new File(plugin.getDataFolder(), "Lang/DataLang.yml");
-            YamlConfiguration dataLangConfig = YamlConfiguration.loadConfiguration(dataLangFile);
-            String playerUUID = player.getUniqueId().toString();
-            return dataLangConfig.getString(playerUUID + ".Language", "english").toLowerCase();
-        } catch (Exception e) {
-            return "english";
-        }
     }
 }

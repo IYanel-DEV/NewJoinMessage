@@ -30,6 +30,8 @@ permissions:
       joinleave.icon: true
       joinleave.preview: true
       joinleave.toggle: true
+      joinleave.list: true
+      joinleave.cooldown.bypass: true
   joinleave.admin:
     description: Admin GUI and all management actions
     default: op
@@ -81,6 +83,12 @@ permissions:
   joinleave.toggle:
     description: Toggle personal join and leave broadcasts.
     default: true
+  joinleave.list:
+    description: List every player who has a custom join or leave message.
+    default: op
+  joinleave.cooldown.bypass:
+    description: Skip the wait between message changes.
+    default: op
   modernjoinmessage.use:
     description: Alias permission for ModernJoinMessage users.
     default: true

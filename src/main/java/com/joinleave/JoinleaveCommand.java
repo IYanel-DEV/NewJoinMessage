@@ -26,20 +26,22 @@ public class JoinleaveCommand implements CommandExecutor, TabCompleter {
     private final GuiHandler guiHandler;
     private final ClearHandler clearHandler;
     private final ReloadHandler reloadHandler;
+    private final ListHandler listHandler;
     private final LanguageHandler languageHandler; // Use LanguageHandler
     private final Language language; // Add Language handler
 
     // Constructor
     public JoinleaveCommand(JoinleaveMessage plugin) {
         this.plugin = plugin;
+        this.languageHandler = plugin.getLanguageHandler();
         this.messageHandler = new MessageHandler(plugin);
-        this.setPlayerHandler = new SetPlayerHandler(plugin, new LanguageHandler(plugin));
+        this.setPlayerHandler = new SetPlayerHandler(plugin, languageHandler);
         this.setHandler = new SetHandler(plugin);
         this.guiHandler = new GuiHandler(plugin);
-        this.clearHandler = new ClearHandler(plugin, new LanguageHandler(plugin)); // Initialize with LanguageHandler
+        this.clearHandler = new ClearHandler(plugin, languageHandler);
         this.reloadHandler = new ReloadHandler(plugin);
-        this.languageHandler = new LanguageHandler(plugin); // Initialize LanguageHandler
-        this.language = new Language(plugin); // Initialize Language handler
+        this.listHandler = new ListHandler(plugin);
+        this.language = new Language(plugin, plugin.getLanguageManager());
     }
 
 
@@ -126,6 +128,10 @@ public class JoinleaveCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args.length >= 1 && args[0].equalsIgnoreCase("list")) {
+            return listHandler.handleListCommand(sender, args);
+        }
+
         if (args.length >= 2 && args[0].equalsIgnoreCase("info")) {
             return messageHandler.handleInfoCommand(sender, args);
         }
@@ -176,6 +182,7 @@ public class JoinleaveCommand implements CommandExecutor, TabCompleter {
             subCommands.add("toggle");
             subCommands.add("icon");
             subCommands.add("sound");
+            subCommands.add("list");
             StringUtil.copyPartialMatches(args[0], subCommands, completions);
         } else if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) {
             List<String> playerNames = new ArrayList<>();
@@ -235,7 +242,8 @@ public class JoinleaveCommand implements CommandExecutor, TabCompleter {
         boolean hasReloadPermission = Perms.has(sender, "joinleave.reload");
         boolean hasGuiPermission = Perms.has(sender, "joinleave.gui");
         boolean hasInfoPermission = Perms.has(sender, "joinleave.info");
-        boolean hasAnyPermission = Perms.isAdmin(sender) || hasSetJoinPermission || hasSetLeavePermission || hasSetPlayerPermission || hasClearPlayerPermission || hasReloadPermission || hasGuiPermission || hasInfoPermission;
+        boolean hasListPermission = Perms.has(sender, "joinleave.list");
+        boolean hasAnyPermission = Perms.isAdmin(sender) || hasSetJoinPermission || hasSetLeavePermission || hasSetPlayerPermission || hasClearPlayerPermission || hasReloadPermission || hasGuiPermission || hasInfoPermission || hasListPermission;
 
         if (!hasAnyPermission) {
             sender.sendMessage(" ");
@@ -273,6 +281,11 @@ public class JoinleaveCommand implements CommandExecutor, TabCompleter {
             if (hasReloadPermission) {
                 sender.sendMessage(" ");
                 sender.sendMessage(ChatColor.LIGHT_PURPLE + languageHandler.getMessage(player, "help.reloadPlugin"));
+            }
+            if (hasListPermission) {
+                sender.sendMessage(" ");
+                sender.sendMessage(ChatColor.LIGHT_PURPLE + "/njm list" + ChatColor.DARK_PURPLE
+                        + " - List players with custom messages");
             }
             sender.sendMessage(" ");
             sender.sendMessage(ChatColor.LIGHT_PURPLE + "/njm preview" + ChatColor.DARK_PURPLE + " - Preview your messages");

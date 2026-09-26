@@ -6,7 +6,7 @@
 
     <groupId>com.joinleave</groupId>
     <artifactId>NewJoinMessage</artifactId>
-    <version>5.1.1</version>
+    <version>5.2.0</version>
     <packaging>jar</packaging>
     <name>NewJoinMessage</name>
     <description>Custom join/leave messages per player for Minecraft 1.8 through latest</description>
@@ -48,7 +48,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>com.joinleave.util.ColorUtilsSelfCheck</mainClass>
+                    <mainClass>com.joinleave.util.SelfCheck</mainClass>
                     <classpathScope>test</classpathScope>
                 </configuration>
             </plugin>

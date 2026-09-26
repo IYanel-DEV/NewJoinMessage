@@ -3,9 +3,10 @@ package com.joinleave.Handler;
 import com.joinleave.JoinleaveMessage;
 import com.joinleave.LanguageHandler;
 import com.joinleave.util.Perms;
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import java.util.UUID;
 
 public class ClearHandler {
 
@@ -23,14 +24,21 @@ public class ClearHandler {
         }
 
         String messageType = args[1].toLowerCase();
-        Player target;
+        if (!messageType.equals("all") && !messageType.equals("join") && !messageType.equals("leave")) {
+            sender.sendMessage(languageHandler.getMessage(null, "clear_invalid_type"));
+            return true;
+        }
+
+        UUID targetId;
+        Player onlineTarget = null;
+
         if (args.length >= 3) {
             if (!Perms.has(sender, "joinleave.clearplayer")) {
                 sender.sendMessage(languageHandler.getMessage(null, "clear_no_permission"));
                 return true;
             }
-            target = Bukkit.getPlayer(args[2]);
-            if (target == null) {
+            targetId = plugin.resolvePlayerUuid(args[2]);
+            if (targetId == null) {
                 sender.sendMessage(languageHandler.getMessage(null, "clear_player_not_found"));
                 return true;
             }
@@ -39,24 +47,21 @@ public class ClearHandler {
                 sender.sendMessage(languageHandler.getMessage(null, "clear_console_error"));
                 return true;
             }
-            target = (Player) sender;
+            onlineTarget = (Player) sender;
             boolean allowed = "all".equals(messageType)
-                    ? plugin.canCustomize(target, "join") && plugin.canCustomize(target, "leave")
-                    : plugin.canCustomize(target, messageType);
+                    ? plugin.canCustomize(onlineTarget, "join") && plugin.canCustomize(onlineTarget, "leave")
+                    : plugin.canCustomize(onlineTarget, messageType);
             if (!allowed) {
-                sender.sendMessage(languageHandler.getMessage(target, "clear_no_permission"));
+                sender.sendMessage(languageHandler.getMessage(onlineTarget, "clear_no_permission"));
                 return true;
             }
+            targetId = onlineTarget.getUniqueId();
         }
 
-        if (!(messageType.equals("all") || messageType.equals("join") || messageType.equals("leave"))) {
-            sender.sendMessage(languageHandler.getMessage(target, "clear_invalid_type"));
-            return true;
-        }
-        plugin.clearMessage(target, messageType);
-        sender.sendMessage(languageHandler.getMessage(target, "clear_success")
+        plugin.clearMessage(targetId, messageType);
+        sender.sendMessage(languageHandler.getMessage(onlineTarget, "clear_success")
                 .replace("%type%", messageType)
-                .replace("%player%", target.getName()));
+                .replace("%player%", plugin.displayNameFor(targetId, args.length >= 3 ? args[2] : "player")));
         return true;
     }
 }
