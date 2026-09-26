@@ -111,3 +111,11 @@ buildNumber.properties
 
 # Common working directory
 run/
+
+# Local tooling and scratch
+tools/
+_explore/
+.superpowers/
+spigot/
+legacy-tree.txt
+modern-tree.txt

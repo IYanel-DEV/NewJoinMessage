@@ -9,10 +9,42 @@ softdepend: [SuperVanish, PremiumVanish, VanishNoPacket]
 commands:
   njm:
     description: NewJoinMessage main command
-    usage: /njm [help|set|clear|gui|reload|setplayer|info|language]
+    usage: /njm [help|set|clear|gui|preview|toggle|icon|sound|reload|setplayer|info|language]
     aliases: [modernjoinmessage, mjm, newjoinmessage]
 
 permissions:
+  joinleave.*:
+    description: All NewJoinMessage permissions
+    default: op
+    children:
+      joinleave.admin: true
+      joinleave.set.join: true
+      joinleave.set.leave: true
+      joinleave.reload: true
+      joinleave.gui: true
+      joinleave.setplayer: true
+      joinleave.clearplayer: true
+      joinleave.info: true
+      joinleave.update: true
+      joinleave.sound: true
+      joinleave.icon: true
+      joinleave.preview: true
+      joinleave.toggle: true
+  joinleave.admin:
+    description: Admin GUI and all management actions
+    default: op
+    children:
+      joinleave.set.join: true
+      joinleave.set.leave: true
+      joinleave.reload: true
+      joinleave.gui: true
+      joinleave.setplayer: true
+      joinleave.clearplayer: true
+      joinleave.info: true
+      joinleave.sound: true
+      joinleave.icon: true
+      joinleave.preview: true
+      joinleave.toggle: true
   joinleave.set.join:
     description: Allows players to set their join message.
     default: op
@@ -37,9 +69,27 @@ permissions:
   joinleave.update:
     description: Check for update.
     default: op
+  joinleave.sound:
+    description: Choose personal join and leave sounds.
+    default: true
+  joinleave.icon:
+    description: Choose a personal icon.
+    default: true
+  joinleave.preview:
+    description: Preview personal join and leave messages.
+    default: true
+  joinleave.toggle:
+    description: Toggle personal join and leave broadcasts.
+    default: true
   modernjoinmessage.use:
     description: Alias permission for ModernJoinMessage users.
     default: true
+  modernjoinmessage.admin:
+    description: Alias admin permission (opens admin GUI)
+    default: op
   modernjoinmessage.reload:
     description: Alias reload permission for ModernJoinMessage users.
     default: op
+  modernjoinmessage.sound.*:
+    description: Alias permission for personal sounds.
+    default: true

@@ -2,6 +2,7 @@ package com.joinleave.Handler;
 
 import com.joinleave.JoinleaveMessage;
 import com.joinleave.LanguageHandler;
+import com.joinleave.util.Perms;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -19,7 +20,7 @@ public class SetPlayerHandler {
 
     public boolean handleSetPlayerCommand(CommandSender sender, String[] args) {
         if (args.length >= 4 && args[0].equalsIgnoreCase("setplayer")) {
-            if (!sender.hasPermission("joinleave.setplayer")) {
+            if (!Perms.has(sender, "joinleave.setplayer")) {
                 sender.sendMessage(languageHandler.getMessage(sender instanceof Player ? (Player) sender : null, "setplayer_no_permission"));
                 return true;
             }

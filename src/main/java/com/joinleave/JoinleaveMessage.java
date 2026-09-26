@@ -2,8 +2,10 @@ package com.joinleave;
 
 import com.joinleave.util.ColorUtils;
 import com.joinleave.util.ModernDataImporter;
+import com.joinleave.util.Perms;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.command.CommandSender;
@@ -12,6 +14,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -31,6 +34,8 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 
 
 
@@ -47,6 +52,7 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
     private LanguageConfigs languageConfigs;
     private LanguageManager languageManager;
     private LanguageHandler languageHandler;
+    private JoinLeaveGUI gui;
 
     @Override
     public void onEnable() {
@@ -54,9 +60,12 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         try {
             enablePlugin();
         } catch (Throwable t) {
-            getLogger().severe("NewJoinMessage failed to enable safely: " + t.getMessage());
-            t.printStackTrace();
-            getServer().getPluginManager().disablePlugin(this);
+            getLogger().log(Level.SEVERE, "NewJoinMessage failed to enable; only this plugin will be disabled.", t);
+            try {
+                getServer().getPluginManager().disablePlugin(this);
+            } catch (Throwable disableFailure) {
+                getLogger().log(Level.SEVERE, "NewJoinMessage could not disable itself cleanly.", disableFailure);
+            }
         }
     }
 
@@ -115,7 +124,7 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         });
 
         try {
-            int pluginId = 18952;
+            int pluginId = 33311;
             Metrics metrics = new Metrics(this, pluginId);
         } catch (Throwable t) {
             getLogger().warning("Metrics (bStats) failed to initialize: " + t.getMessage());
@@ -127,12 +136,12 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         String defaultEncoding = System.getProperty("file.encoding");
         getLogger().info("Default system encoding: " + defaultEncoding);
 
+        this.gui = new JoinLeaveGUI(this);
+        getServer().getPluginManager().registerEvents(this.gui, this);
+
         JoinleaveCommand joinLeaveCommand = new JoinleaveCommand(this);
         getCommand("njm").setExecutor(joinLeaveCommand);
         getCommand("njm").setTabCompleter(joinLeaveCommand);
-
-        JoinLeaveGUI guiListener = new JoinLeaveGUI(this);
-        getServer().getPluginManager().registerEvents(guiListener, this);
 
         playersFile = new File(getDataFolder(), "data.yml");
         if (!playersFile.exists()) {
@@ -142,14 +151,10 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         ModernDataImporter.importIfNeeded(this, playersConfig, playersFile);
 
         mysqlEnabled = getConfig().getBoolean("mysql.enabled");
-        if (mysqlEnabled) {
-            if (setupMySQL()) {
-                createTableIfNotExists();
-            } else {
-                mysqlEnabled = false;
-                connection = null;
-                getLogger().severe("MySQL failed — falling back to data.yml for this session.");
-            }
+        if (mysqlEnabled && (!setupMySQL() || !createTableIfNotExists())) {
+            mysqlEnabled = false;
+            closeMySQLConnection();
+            getLogger().severe("MySQL failed — falling back to data.yml for this session.");
         }
     }
 
@@ -170,6 +175,10 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         return instance;
     }
 
+    public JoinLeaveGUI getGui() {
+        return gui;
+    }
+
     private FileConfiguration getPlayersConfig() {
         return playersConfig;
     }
@@ -183,8 +192,7 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
     }
 
     public boolean hasCustomMessage(Player player) {
-        return getMessage(player, "join", "default-join-message") != null ||
-                getMessage(player, "leave", "default-leave-message") != null;
+        return getCustomMessage(player, "join") != null || getCustomMessage(player, "leave") != null;
     }
 
     public String getLastChange(Player player, String messageType) {
@@ -208,9 +216,11 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         String password = getConfig().getString("mysql.password");
 
         try {
-            connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false", username, password);
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + database
+                    + "?useSSL=false&connectTimeout=5000&socketTimeout=5000", username, password);
             return true;
-        } catch (SQLException e) {
+        } catch (ClassNotFoundException | SQLException e) {
             connection = null;
             getLogger().severe("Failed to connect to MySQL: " + e.getMessage());
             return false;
@@ -228,14 +238,14 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         }
     }
 
-    private void createTableIfNotExists() {
-        try {
-            PreparedStatement statement = connection.prepareStatement(
-                    "CREATE TABLE IF NOT EXISTS player_messages (uuid VARCHAR(36) PRIMARY KEY, join_message TEXT, leave_message TEXT)");
+    private boolean createTableIfNotExists() {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "CREATE TABLE IF NOT EXISTS player_messages (uuid VARCHAR(36) PRIMARY KEY, join_message TEXT, leave_message TEXT)")) {
             statement.executeUpdate();
-            statement.close();
+            return true;
         } catch (SQLException e) {
             getLogger().severe("Failed to create player_messages table: " + e.getMessage());
+            return false;
         }
     }
 
@@ -312,13 +322,12 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         if (newMySQLStatus != mysqlEnabled) {
             if (newMySQLStatus) {
                 closeMySQLConnection();
-                if (setupMySQL()) {
-                    createTableIfNotExists();
+                if (setupMySQL() && createTableIfNotExists()) {
                     mysqlEnabled = true;
                     getLogger().info("MySQL has been enabled and connected successfully.");
                 } else {
                     mysqlEnabled = false;
-                    connection = null;
+                    closeMySQLConnection();
                     getLogger().severe("MySQL failed — falling back to data.yml for this session.");
                 }
             } else {
@@ -329,12 +338,11 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         }
 
         if (mysqlEnabled && connection == null) {
-            if (setupMySQL()) {
-                createTableIfNotExists();
+            if (setupMySQL() && createTableIfNotExists()) {
                 getLogger().info("MySQL has been enabled and connected successfully.");
             } else {
                 mysqlEnabled = false;
-                connection = null;
+                closeMySQLConnection();
                 getLogger().severe("MySQL failed — falling back to data.yml for this session.");
             }
         }
@@ -371,58 +379,164 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         return v == null ? def : v;
     }
 
-    private String parsePlaceholders(String message, Player player) {
-        if (message == null) return "";
-        return message.contains("PLAYERNAME") ? message.replace("PLAYERNAME", player.getName()) : message;
+    public boolean canCustomize(Player player, String type) {
+        return getConfig().getBoolean("allow-all-players", true)
+                || Perms.has(player, "joinleave.set." + type);
     }
 
-    @EventHandler
+    public String parsePlaceholders(String message, Player player) {
+        if (message == null) {
+            return "";
+        }
+        return message.replace("PLAYERNAME", player.getName())
+                .replace("%player%", player.getName())
+                .replace("%displayname%", player.getDisplayName())
+                .replace("%world%", player.getWorld().getName())
+                .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
+                .replace("%max_players%", String.valueOf(Bukkit.getMaxPlayers()));
+    }
+
+    public String renderMessage(Player player, String type) {
+        boolean join = "join".equals(type);
+        String editable = getMessage(player, type, "default-" + type + "-message");
+        String icon = getIcon(player);
+        String iconPrefix = icon.isEmpty() ? "" : ColorUtils.colorize(icon) + " ";
+        if (getConfig().getBoolean("use-modern-format", false)) {
+            return iconPrefix + ColorUtils.colorize(cfg("player-name-color", "&a")) + player.getName()
+                    + " " + ColorUtils.colorize(cfg(type + "-text-color", "&f"))
+                    + ColorUtils.colorize(parsePlaceholders(cfg(type + "-text", join ? "joined the server" : "left the server"), player))
+                    + " - " + ColorUtils.colorize(parsePlaceholders(editable, player));
+        }
+        String prefix = ColorUtils.colorize(cfg(type + "-prefix", join ? "&d[&a+&d]" : "&7[&c-&7]"));
+        String action = ColorUtils.colorize(parsePlaceholders(
+                cfg("default-" + type + "-prefix", join ? "&7PLAYERNAME &5has joined" : "&4PLAYERNAME has left"), player));
+        return prefix + " " + iconPrefix + action + ChatColor.GRAY + " - "
+                + ColorUtils.colorize(parsePlaceholders(editable, player));
+    }
+
+    public boolean broadcastsDisabled(Player player) {
+        if (VanishAPI.isVanished(player) || !isBroadcastEnabled(player)) {
+            return true;
+        }
+        for (String world : getConfig().getStringList("disabled-worlds")) {
+            if (player.getWorld().getName().equalsIgnoreCase(world)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void handleJoin(PlayerJoinEvent event) {
         try {
             Player player = event.getPlayer();
-            String playerName = player.getName();
-            String joinEditable = getMessage(player, "join", "default-join-message");
-            String joinMessage;
-            if (getConfig().getBoolean("use-modern-format", false)) {
-                joinMessage = ColorUtils.colorize(cfg("player-name-color", "&a")) + playerName
-                        + " " + ColorUtils.colorize(cfg("join-text-color", "&f")) + cfg("join-text", "joined the server")
-                        + " - " + ColorUtils.colorize(parsePlaceholders(joinEditable, player));
-            } else {
-                String joinPrefix = ColorUtils.colorize(cfg("join-prefix", "&d[&a+&d]"));
-                String defaultJoinPrefix = ColorUtils.colorize(
-                        cfg("default-join-prefix", "&7PLAYERNAME &5has joined").replace("PLAYERNAME", playerName));
-                joinMessage = joinPrefix + " " + defaultJoinPrefix + ChatColor.GRAY + " - "
-                        + ColorUtils.colorize(parsePlaceholders(joinEditable, player));
+            if (broadcastsDisabled(player)) {
+                event.setJoinMessage(null);
+                return;
             }
-            event.setJoinMessage(joinMessage);
+            event.setJoinMessage(renderMessage(player, "join"));
+            playConfiguredSound(player, "join");
         } catch (Throwable t) {
             getLogger().warning("handleJoin failed for " + event.getPlayer().getName() + ": " + t.getMessage());
             event.setJoinMessage(event.getPlayer().getName() + " joined");
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void handleLeave(PlayerQuitEvent event) {
         try {
             Player player = event.getPlayer();
-            String playerName = player.getName();
-            String leaveEditable = getMessage(player, "leave", "default-leave-message");
-            String leaveMessage;
-            if (getConfig().getBoolean("use-modern-format", false)) {
-                leaveMessage = ColorUtils.colorize(cfg("player-name-color", "&a")) + playerName
-                        + " " + ColorUtils.colorize(cfg("leave-text-color", "&f")) + cfg("leave-text", "left the server")
-                        + " - " + ColorUtils.colorize(parsePlaceholders(leaveEditable, player));
-            } else {
-                String leavePrefix = ColorUtils.colorize(cfg("leave-prefix", "&d[&c-&d]"));
-                String defaultLeavePrefix = ColorUtils.colorize(
-                        cfg("default-leave-prefix", "&7PLAYERNAME &5has left").replace("PLAYERNAME", playerName));
-                leaveMessage = leavePrefix + " " + defaultLeavePrefix + ChatColor.GRAY + " - "
-                        + ColorUtils.colorize(parsePlaceholders(leaveEditable, player));
+            if (broadcastsDisabled(player)) {
+                event.setQuitMessage(null);
+                return;
             }
-            event.setQuitMessage(leaveMessage);
+            event.setQuitMessage(renderMessage(player, "leave"));
+            playConfiguredSound(player, "leave");
         } catch (Throwable t) {
             getLogger().warning("handleLeave failed for " + event.getPlayer().getName() + ": " + t.getMessage());
             event.setQuitMessage(event.getPlayer().getName() + " left");
+        }
+    }
+
+    private String playerPath(Player player, String key) {
+        return "players." + player.getUniqueId() + "." + key;
+    }
+
+    private String getPlayerSetting(Player player, String key) {
+        return playersConfig.getString(playerPath(player, key));
+    }
+
+    private void setPlayerSetting(Player player, String key, Object value) {
+        playersConfig.set(playerPath(player, key), value);
+        savePlayersConfig();
+    }
+
+    public boolean isBroadcastEnabled(Player player) {
+        return playersConfig.getBoolean(playerPath(player, "broadcast_enabled"), true);
+    }
+
+    public boolean toggleBroadcast(Player player) {
+        boolean enabled = !isBroadcastEnabled(player);
+        setPlayerSetting(player, "broadcast_enabled", enabled);
+        return enabled;
+    }
+
+    public String getIcon(Player player) {
+        String icon = getPlayerSetting(player, "icon");
+        if ("off".equalsIgnoreCase(icon)) {
+            return "";
+        }
+        return icon == null ? cfg("default-icon", "") : icon;
+    }
+
+    public void setIcon(Player player, String icon) {
+        setPlayerSetting(player, "icon", icon == null || icon.isEmpty() || "off".equalsIgnoreCase(icon) ? "off" : icon);
+    }
+
+    public String getSound(Player player, String type) {
+        String sound = getPlayerSetting(player, type + "_sound");
+        return sound == null ? cfg("sounds." + type, "") : sound;
+    }
+
+    public boolean setSound(Player player, String type, String soundName) {
+        if ("off".equalsIgnoreCase(soundName)) {
+            setPlayerSetting(player, type + "_sound", "off");
+            return true;
+        }
+        Sound sound = resolveSound(soundName);
+        if (sound == null) {
+            return false;
+        }
+        setPlayerSetting(player, type + "_sound", sound.name());
+        return true;
+    }
+
+    private Sound resolveSound(String names) {
+        if (names == null || names.trim().isEmpty() || "off".equalsIgnoreCase(names.trim())) {
+            return null;
+        }
+        for (String name : names.split(",")) {
+            try {
+                return Sound.valueOf(name.trim().toUpperCase(Locale.ENGLISH).replace('-', '_').replace(' ', '_'));
+            } catch (IllegalArgumentException ignored) {
+                // Try the next cross-version alias.
+            }
+        }
+        return null;
+    }
+
+    private void playConfiguredSound(Player source, String type) {
+        if (!getConfig().getBoolean("sounds.enabled", false)) {
+            return;
+        }
+        Sound sound = resolveSound(getSound(source, type));
+        if (sound == null) {
+            return;
+        }
+        float volume = (float) getConfig().getDouble("sounds.volume", 1.0D);
+        float pitch = (float) getConfig().getDouble("sounds.pitch", 1.0D);
+        for (Player recipient : Bukkit.getOnlinePlayers()) {
+            recipient.playSound(recipient.getLocation(), sound, volume, pitch);
         }
     }
 
@@ -432,24 +546,28 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
     }
 
     public void setMessage(Player player, String column, String message) {
+        if (!("join".equals(column) || "leave".equals(column))) {
+            getLogger().warning("Ignored invalid message type: " + column);
+            return;
+        }
         boolean useMysql = mysqlEnabled && connection != null;
         if (useMysql) {
-            try {
-                PreparedStatement statement = connection.prepareStatement(
-                        "INSERT INTO player_messages (uuid, " + column + "_message) VALUES (?, ?) ON DUPLICATE KEY UPDATE " + column + "_message = ?");
+            try (PreparedStatement statement = connection.prepareStatement(
+                    "INSERT INTO player_messages (uuid, " + column + "_message) VALUES (?, ?) ON DUPLICATE KEY UPDATE " + column + "_message = ?")) {
                 statement.setString(1, player.getUniqueId().toString());
                 statement.setString(2, message);
                 statement.setString(3, message);
                 statement.executeUpdate();
-                statement.close();
+                return;
             } catch (SQLException e) {
-                getLogger().severe("Failed to set " + column + " message for player: " + e.getMessage());
+                getLogger().severe("MySQL write failed; using data.yml for this session: " + e.getMessage());
+                mysqlEnabled = false;
+                closeMySQLConnection();
             }
-        } else {
-            playersConfig.set("players." + player.getUniqueId() + "." + column + "_message", message);
-            updateLastChange(player, column);
-            savePlayersConfig();
         }
+        playersConfig.set("players." + player.getUniqueId() + "." + column + "_message", message);
+        updateLastChange(player, column);
+        savePlayersConfig();
     }
 
     private void updateLastChange(Player player, String messageType) {
@@ -457,7 +575,10 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         playersConfig.set("players." + player.getUniqueId() + ".last_change." + messageType, System.currentTimeMillis());
     }
 
-    public String getMessage(Player player, String messageType, String defaultMessageType) {
+    public String getCustomMessage(Player player, String messageType) {
+        if (!("join".equals(messageType) || "leave".equals(messageType))) {
+            return null;
+        }
         boolean useMysql = mysqlEnabled && connection != null;
         if (useMysql) {
             try (PreparedStatement statement = connection.prepareStatement(
@@ -466,21 +587,28 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         String message = resultSet.getString(messageType + "_message");
-                        if (message != null && !message.isEmpty()) {
-                            return message;
-                        }
+                        return message == null || message.isEmpty() ? null : message;
                     }
                 }
             } catch (SQLException e) {
-                getLogger().severe("Failed to retrieve " + messageType + " message for player: " + e.getMessage());
-            }
-        } else {
-            String message = playersConfig.getString("players." + player.getUniqueId() + "." + messageType + "_message");
-            if (message != null && !message.isEmpty()) {
-                return message;
+                getLogger().severe("MySQL read failed; using data.yml for this session: " + e.getMessage());
+                mysqlEnabled = false;
+                closeMySQLConnection();
             }
         }
+        String message = playersConfig.getString(playerPath(player, messageType + "_message"));
+        return message == null || message.isEmpty() ? null : message;
+    }
 
-        return getConfig().getString(defaultMessageType);
+    public String getMessage(Player player, String messageType, String defaultMessageType) {
+        String custom = getCustomMessage(player, messageType);
+        if (custom != null) {
+            return custom;
+        }
+        List<String> pool = getConfig().getStringList("default-" + messageType + "-messages");
+        if (!pool.isEmpty()) {
+            return pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
+        }
+        return cfg(defaultMessageType, "");
     }
 }

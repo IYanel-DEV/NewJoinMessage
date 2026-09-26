@@ -24,8 +24,7 @@ public class SetHandler {
                 String message = String.join(" ", args).substring(args[0].length() + args[1].length() + 2);
 
                 if (messageType.equals("join") || messageType.equals("leave")) {
-                    if ((messageType.equals("join") && !player.hasPermission("joinleave.set.join")) ||
-                            (messageType.equals("leave") && !player.hasPermission("joinleave.set.leave"))) {
+                    if (!plugin.canCustomize(player, messageType)) {
                         sender.sendMessage(languageHandler.getMessage(player, "no_permission").replace("%type%", messageType));
                         return true;
                     }

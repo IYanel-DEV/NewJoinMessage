@@ -79,7 +79,11 @@ public class PlayerWelcome implements Listener {
         } else {
             // Load already joined players' UUIDs
             for (String key : playersConfig.getConfigurationSection("players").getKeys(false)) {
-                joinedPlayers.add(UUID.fromString(key));
+                try {
+                    joinedPlayers.add(UUID.fromString(key));
+                } catch (IllegalArgumentException e) {
+                    plugin.getLogger().warning("Ignoring invalid UUID in players.yml: " + key);
+                }
             }
         }
     }
@@ -115,16 +119,19 @@ public class PlayerWelcome implements Listener {
         try {
             Player player = event.getPlayer();
             UUID playerId = player.getUniqueId();
+            boolean firstJoin = joinedPlayers.add(playerId);
+            boolean welcomeMessageEnabled = plugin.getConfig().getBoolean("welcome-message-enabled", false);
+            boolean broadcastsDisabled = plugin instanceof JoinleaveMessage
+                    && ((JoinleaveMessage) plugin).broadcastsDisabled(player);
 
-            // Always perform these actions regardless of whether player has joined before
-            boolean welcomeMessageEnabled = plugin.getConfig().getBoolean("welcome-message-enabled", true); // Check if welcome message is enabled
-
-            if (welcomeMessageEnabled) {
-                int playerCount = playersConfig.getConfigurationSection("players").getKeys(false).size();
-                String welcomeMessage = ChatColor.translateAlternateColorCodes('&',
-                        "&e&l[!] &7Welcome " + ChatColor.YELLOW + player.getName() + ChatColor.GRAY +
-                                " to the server! You are the " + ChatColor.LIGHT_PURPLE + "#" + playerCount + ChatColor.GRAY + " player!");
-
+            if (welcomeMessageEnabled && firstJoin && !broadcastsDisabled) {
+                String configured = plugin.getConfig().getString("welcome-message",
+                        "&e&l[!] &7Welcome %player% to the server! You are player #%count%!");
+                if (plugin instanceof JoinleaveMessage) {
+                    configured = ((JoinleaveMessage) plugin).parsePlaceholders(configured, player);
+                }
+                String welcomeMessage = ChatColor.translateAlternateColorCodes('&', configured)
+                        .replace("%count%", String.valueOf(joinedPlayers.size()));
                 Bukkit.broadcastMessage(welcomeMessage);
             }
 
@@ -134,7 +141,7 @@ public class PlayerWelcome implements Listener {
             // Firework display
             boolean fireworkEnabled = fireworksConfig.getBoolean("fireworks.enabled", true); // Corrected accessing boolean value
 
-            if (fireworkEnabled) {
+            if (fireworkEnabled && firstJoin && !broadcastsDisabled) {
                 String fireworkTypeString = fireworksConfig.getString("fireworks.type", "BALL");
                 FireworkEffect.Type fireworkType;
                 try {

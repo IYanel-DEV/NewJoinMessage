@@ -1,11 +1,9 @@
 package com.joinleave.Handler;
 
 import com.joinleave.JoinleaveMessage;
+import com.joinleave.util.Perms;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-
-import java.util.Arrays;
-import java.util.List;
 
 public class ReloadHandler {
 
@@ -17,7 +15,7 @@ public class ReloadHandler {
     }
 
     public boolean handleReloadCommand(CommandSender sender) {
-        if (sender.hasPermission("joinleave.reload")) {
+        if (Perms.has(sender, "joinleave.reload")) {
             // Reload the plugin
             plugin.reloadPlugin(sender);
             return true;

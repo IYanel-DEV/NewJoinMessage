@@ -5,7 +5,7 @@
 
 about:
   - "NewJoinMessage Plugin"
-  - "Version: 5.0.0"
+  - "Version: 5.1.1"
   - "Author: [Yanel, oled]"
 
 
@@ -22,8 +22,6 @@ mysql:
   username: your_username
   password: your_password
 
-
-#Please make sure not to exceed 9 words in your messages to prevent any issues with the plugin.
 
 # Join and leave messages
 
@@ -57,3 +55,30 @@ join-text-color: "&f"
 leave-text-color: "&f"
 use-modern-format: false
 
+# Keep ModernJoinMessage's player-friendly behavior. When false, players need
+# the matching joinleave.set.* permission.
+allow-all-players: true
+
+# Optional icon shown before the player name. Players can override it with
+# /njm icon <icon>, or remove it with /njm icon off.
+default-icon: ""
+
+# Sounds accept comma-separated aliases so one config works across old and new
+# Bukkit enum names. Set enabled to false to keep joins/leaves silent.
+sounds:
+  enabled: false
+  join: "ENTITY_PLAYER_LEVELUP,LEVEL_UP"
+  leave: "BLOCK_NOTE_BLOCK_BASS,NOTE_BASS"
+  volume: 1.0
+  pitch: 1.0
+
+# Optional pools. A random entry is used only when a player has no custom
+# message. Leave empty to use default-join-message/default-leave-message.
+default-join-messages: []
+default-leave-messages: []
+
+# No join/leave broadcast is sent while a player is in one of these worlds.
+disabled-worlds: []
+
+# Available in messages: %player%, %displayname%, %world%, %online%,
+# %max_players%, plus the legacy PLAYERNAME token.
