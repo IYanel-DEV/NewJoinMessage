@@ -15,14 +15,14 @@ Spigot: https://www.spigotmc.org/resources/110979/
 
 ## Commands
 
-- `/njm` or `/njm gui` ? open the player/admin GUI
-- `/njm set <join|leave> <message>` ? set your message
-- `/njm clear <all|join|leave>` ? clear your message
-- `/njm preview` ? preview both messages
-- `/njm toggle` ? enable or disable your broadcasts
-- `/njm icon <icon|off>` ? choose an icon
-- `/njm sound <join|leave> <sound|off>` ? choose a sound available on the current server
-- `/njm setplayer`, `/njm info`, `/njm reload`, `/njm language` ? administration and language tools
+- `/njm` or `/njm gui` → open the player/admin GUI
+- `/njm set <join|leave> <message>` → set your message
+- `/njm clear <all|join|leave>` → clear your message
+- `/njm preview` → preview both messages
+- `/njm toggle` → enable or disable your broadcasts
+- `/njm icon <icon|off>` → choose an icon
+- `/njm sound <join|leave> <sound|off>` → choose a sound available on the current server
+- `/njm setplayer`, `/njm info`, `/njm reload`, `/njm language` → administration and language tools
 
 ## Build
 
@@ -48,5 +48,5 @@ If `plugins/NewJoinMessage/data.yml` has no players yet and `plugins/ModernJoinM
 
 ## Legacy repos
 
-- https://github.com/IYanel-DEV/Legacy-JoinLeaveMessage ? superseded
-- https://github.com/IYanel-DEV/ModernJoinMessage ? superseded
+- https://github.com/IYanel-DEV/Legacy-JoinLeaveMessage → superseded
+- https://github.com/IYanel-DEV/ModernJoinMessage → superseded
