@@ -5,7 +5,7 @@
 
 about:
   - "NewJoinMessage Plugin"
-  - "Version: 5.2.0"
+  - "Version: 6.0.0"
   - "Author: [Yanel, oled]"
 
 # Check Spigot for a newer version on startup. Online admins holding
@@ -91,6 +91,16 @@ disabled-worlds: []
 # Available in messages: %player%, %displayname%, %world%, %online%,
 # %max_players%, %player_count%, %server_name%, %motd%, %server_version%,
 # %time%, %prefix%, %vault_prefix%, plus the legacy PLAYERNAME token.
+#
+# LuckPerms: %luckperms_prefix%, %luckperms_suffix%, %luckperms_group%
+# Essentials: %essentials_nickname%, %essentials_displayname%, %essentials_vanished%, %essentials_afk%
+# Citizens: %citizens_is_npc%, %citizens_npc_name%
+# WorldGuard: %worldguard_regions%, %worldguard_region%
+# Multiverse: %multiverse_world%, %multiverse_world_alias%, %multiverse_world_colored%
+# DiscordSRV: %discordsrv_verified%
+# PlaceholderAPI: All PlaceholderAPI placeholders (e.g. %player_health%, %server_tps%)
+# MVdWPlaceholderAPI: All MVdWPlaceholderAPI placeholders
+# MiniMessage: Full MiniMessage syntax support (e.g. <red>text</red>, <gradient:blue:green>text</gradient>)
 
 # Longest custom message a player may set, in characters. Stops oversized chat
 # spam. Set to 0 for no limit.
@@ -105,3 +115,29 @@ server-name: ""
 
 # Players listed per /njm list page.
 list-page-size: 8
+
+# DiscordSRV Integration
+discordsrv:
+  enabled: false
+  join-message: "🟢 %player% joined the server"
+  leave-message: "🔴 %player% left the server"
+
+# HolographicDisplays Integration
+holographicdisplays:
+  enabled: false
+  join-duration-seconds: 3
+  leave-duration-seconds: 3
+  height-offset: 2.5
+
+# ProtocolLib Integration (for advanced packet features)
+protocollib:
+  enabled: false
+  use-packets-for-messages: false
+
+# WorldGuard Integration
+worldguard:
+  enabled: false
+  # List of region names where join/leave messages are disabled
+  disabled-regions: []
+  # List of region names where join/leave messages are forced
+  forced-regions: []

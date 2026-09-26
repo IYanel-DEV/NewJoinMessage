@@ -4,7 +4,7 @@ main: com.joinleave.JoinleaveMessage
 authors: [Yanel, oled]
 description: Custom join/leave messages per player for Minecraft 1.8 through latest
 website: https://www.spigotmc.org/resources/110979/
-softdepend: [SuperVanish, PremiumVanish, VanishNoPacket]
+softdepend: [SuperVanish, PremiumVanish, VanishNoPacket, PlaceholderAPI, LuckPerms, Essentials, Citizens, ProtocolLib, WorldGuard, Multiverse-Core, DiscordSRV, HolographicDisplays, MVdWPlaceholderAPI]
 
 commands:
   njm:

@@ -6,7 +6,7 @@
 
     <groupId>com.joinleave</groupId>
     <artifactId>NewJoinMessage</artifactId>
-    <version>5.2.0</version>
+    <version>6.0.0</version>
     <packaging>jar</packaging>
     <name>NewJoinMessage</name>
     <description>Custom join/leave messages per player for Minecraft 1.8 through latest</description>

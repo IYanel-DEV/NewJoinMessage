@@ -7,6 +7,17 @@ import com.joinleave.util.ColorUtils;
 import com.joinleave.util.ModernDataImporter;
 import com.joinleave.util.Perms;
 import com.joinleave.util.VaultHook;
+import com.joinleave.util.PlaceholderAPIHook;
+import com.joinleave.util.LuckPermsHook;
+import com.joinleave.util.EssentialsHook;
+import com.joinleave.util.CitizensHook;
+import com.joinleave.util.ProtocolLibHook;
+import com.joinleave.util.WorldGuardHook;
+import com.joinleave.util.MultiverseHook;
+import com.joinleave.util.DiscordSRVHook;
+import com.joinleave.util.HolographicDisplaysHook;
+import com.joinleave.util.MiniMessageHook;
+import com.joinleave.util.MVdWPlaceholderAPIHook;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -91,6 +102,18 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
 
         vaultHook = new VaultHook(getLogger());
         vaultHook.setup();
+
+        PlaceholderAPIHook.setup();
+        LuckPermsHook.setup();
+        EssentialsHook.setup();
+        CitizensHook.setup();
+        ProtocolLibHook.setup();
+        WorldGuardHook.setup();
+        MultiverseHook.setup();
+        DiscordSRVHook.setup();
+        HolographicDisplaysHook.setup();
+        MiniMessageHook.setup();
+        MVdWPlaceholderAPIHook.setup();
 
         this.gui = new JoinLeaveGUI(this);
         getServer().getPluginManager().registerEvents(this.gui, this);
@@ -342,7 +365,7 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
         }
         String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
 
-        return message.replace("PLAYERNAME", player.getName())
+        String parsed = message.replace("PLAYERNAME", player.getName())
                 .replace("%player%", player.getName())
                 .replace("%displayname%", player.getDisplayName())
                 .replace("%world%", player.getWorld().getName())
@@ -352,9 +375,50 @@ public class JoinleaveMessage extends JavaPlugin implements Listener {
                 .replace("%server_name%", serverName)
                 .replace("%motd%", Bukkit.getServer().getMotd())
                 .replace("%server_version%", Bukkit.getServer().getBukkitVersion())
-                .replace("%time%", time)
-                .replace("%vault_prefix%", vaultPrefix(player))
+                .replace("%time%", time);
+
+        // Vault prefix
+        parsed = parsed.replace("%vault_prefix%", vaultPrefix(player))
                 .replace("%prefix%", vaultPrefix(player));
+
+        // LuckPerms placeholders
+        parsed = parsed.replace("%luckperms_prefix%", LuckPermsHook.getPrefix(player))
+                .replace("%luckperms_suffix%", LuckPermsHook.getSuffix(player))
+                .replace("%luckperms_group%", LuckPermsHook.getPrimaryGroup(player));
+
+        // Essentials placeholders
+        parsed = parsed.replace("%essentials_nickname%", EssentialsHook.getNickname(player))
+                .replace("%essentials_displayname%", EssentialsHook.getDisplayName(player))
+                .replace("%essentials_vanished%", EssentialsHook.isVanished(player) ? "true" : "false")
+                .replace("%essentials_afk%", EssentialsHook.isAfk(player) ? "true" : "false");
+
+        // Citizens placeholders
+        parsed = parsed.replace("%citizens_is_npc%", CitizensHook.isNPC(player) ? "true" : "false")
+                .replace("%citizens_npc_name%", CitizensHook.getNPCName(player));
+
+        // WorldGuard placeholders
+        java.util.Set<String> regions = WorldGuardHook.getRegionsAt(player);
+        parsed = parsed.replace("%worldguard_regions%", String.join(",", regions))
+                .replace("%worldguard_region%", WorldGuardHook.getFirstRegion(player));
+
+        // Multiverse placeholders
+        parsed = parsed.replace("%multiverse_world%", MultiverseHook.getWorldDisplayName(player))
+                .replace("%multiverse_world_alias%", MultiverseHook.getWorldAlias(player.getWorld()))
+                .replace("%multiverse_world_colored%", MultiverseHook.getColoredWorldName(player.getWorld()));
+
+        // DiscordSRV placeholder
+        parsed = parsed.replace("%discordsrv_verified%", DiscordSRVHook.isVerified(player) ? "true" : "false");
+
+        // PlaceholderAPI (expands all other plugin placeholders)
+        parsed = PlaceholderAPIHook.parsePlaceholders(player, parsed);
+
+        // MVdWPlaceholderAPI
+        parsed = MVdWPlaceholderAPIHook.parsePlaceholders(player, parsed);
+
+        // MiniMessage parsing (auto-detect and parse)
+        parsed = MiniMessageHook.parseAuto(parsed, player);
+
+        return parsed;
     }
 
     private String vaultPrefix(Player player) {
